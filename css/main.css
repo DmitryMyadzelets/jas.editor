@@ -1,0 +1,100 @@
+@charset 'UTF-8';
+
+/*
+http://csswizardry.com/2014/10/the-specificity-graph/
+http://cssguidelin.es/#specificity
+
+Matherial Design:
+www.google.com/design/spec/material-design/
+*/
+
+body {
+    /*background-color: #336698;*/
+    font-family: Verdana, sans-serif;
+}
+
+
+div {
+  position: relative;
+  float: left;
+  border: solid 1px orange;
+  margin: 1px;
+  /*padding: 1px;*/
+  /*width: 100%;*/
+  /*height: 1000px;*/
+  /*overflow: hidden;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  top: 0;*/
+}
+
+
+*.unselectable {
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+
+   /*
+     Introduced in IE 10.
+     See http://ie.microsoft.com/testdrive/HTML5/msUserSelect/
+   */
+   -ms-user-select: none;
+   user-select: none;
+}
+
+
+/* SVG */
+g.nodes circle { 
+  stroke-width: 0.09em;
+}
+
+
+g.nodes circle.marked {
+  fill: none;
+}
+
+.selected,
+.selection {
+  fill: none;
+  stroke: black;
+  stroke-dasharray: 0.5em,0.3em;
+  stroke-dasharray: 0.6em,0.2em;
+}
+
+rect.selection {
+  shape-rendering : crispEdges;
+}
+
+
+/* Edge of graph */
+
+path.edge {
+}
+
+path.catch {
+  fill: none;
+  stroke: yellow;
+  stroke-width: 0.8em;
+  stroke-opacity: 0.0;
+  /*cursor: pointer;*/
+}
+
+.edges text {
+  text-shadow: 2px 2px .5px white, -2px -2px .5px white, 2px -2px .5px white, -2px 2px .5px white;
+}
+
+/* Textarea */
+#c88d9c30-5871-11e4-8ed6-0800200c9a66 {
+  font-size: small;
+  font-family: Verdana, sans-serif;
+  border: solid 1px gray;
+  /*border: 0 none white;*/
+  overflow: hidden;
+  padding: 0;
+  outline: none;
+  resize: none;
+  background-color: white;
+  background: rgba(255, 255, 255, 0.6);
+  /*background: transparent;*/
+}
