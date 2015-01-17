@@ -41,8 +41,24 @@
 
     (function init () {
         var graph = load_graph('graph');
-        if (typeof graph === 'object') {
+        if (graph && graph.nodes) {
             editor.set_graph(graph);
+        } else {
+            var x = container.offsetWidth / 4;
+            var y = container.offsetHeight / 3;
+            editor.set_graph({
+                nodes : [
+                    { x : x, y : y, initial : true, text : 'off' }, 
+                    { x : x + 150, y : y, text : 'on' },
+                    { x : x + 150, y : y + 100, marked : true}
+                ],
+                edges : [
+                    {source : 0, target : 1, text : 'up'},
+                    {source : 1, target : 1, text : '*'},
+                    {source : 1, target : 0, text : 'down'}, 
+                    {source : 1, target : 2, text : 'hello world'}
+                ]
+            });
         }
     }());
 
@@ -85,6 +101,16 @@
 
         // Delete the copy of SVG
         svg.parentNode.removeChild(svg);
+    });
+
+
+    d3.select('#btn_undo').on('click', function () {
+        alert('undo');
+    });
+
+
+    d3.select('#btn_redo').on('click', function () {
+        alert('redo');
     });
 
 }());

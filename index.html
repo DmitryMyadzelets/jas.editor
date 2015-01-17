@@ -23,24 +23,48 @@
     <!-- jas.editor -->
     <script src="js/jas.editor.min.js"></script>
 
-    <title>Jas.editor by DmitryMyadzelets</title>
+    <title>Automata Editor</title>
   </head>
 
   <body>
-<!--     <header>
-      <div class="inner">
-        <h1>jas.editor</h1>
-        <h2>Automata in JavaScript. Editor</h2>
-        <a href="https://github.com/DmitryMyadzelets/jas.editor" class="button">View project on GitHub</a>
-      </div>
-    </header>
-
-    <div id="content-wrapper">
+    <div id="top_panel">
+        <span class="caption">Automata Editor</span>
+<!--         <a href="#" class="menu-link" id="btn_undo">Undo</a>
+        <a href="#" class="menu-link" id="btn_redo">Redo</a>
+ -->        <a href="#" class="menu-link" id="btn_save">Save as SVG</a>
     </div>
- -->
 
-    <div id="svg_container" style="position: relative; width: 100%; height: 100vh">
-      <input id='btn_save' type="submit" value="Save"/>
+
+    <div id="help_wrapper">
+        <pre>
+Automata graph manipulation
+
+Mouse:
+    Double click on empty space - creates new state
+    Click on a state and drag to another - creates new transition
+    Click on state or transition - selection
+    Ctrl + click - multiselection
+    Hold Shift to move states and transitions
+    Double click on a state - edit its label
+    Double click on a transition- edit its label
+
+Keys:
+    Delete - deletes selected elements
+    M - marks selected states
+    Ctrl + M - unmark selected states
+    I - make selected states as initial ones (exclusively)
+    F - switch on\off force-directed layout mode
+    Ctrl + Z - undo a command
+    Ctrl + Y - redo a command
+
+Graph is stored in the local storage of your browser. You can
+close and reopen this page - the graph will be preserved.
+
+Contact: DmitryMyadzelets at gmail.com
+        </pre>
+    </div>
+
+    <div id="svg_container">
     </div>
 
     <!-- application main script -->

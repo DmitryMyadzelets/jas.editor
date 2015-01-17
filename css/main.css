@@ -10,14 +10,57 @@ body {
 }
 
 
-div {
-  position: relative;
-  float: left;
-  border: solid 0px orange;
-  margin: 0;
-  padding: 0;
+#top_panel {
+    display: block;
+    position: absolute;
+    height: 1em;
+    width: 100%;
+    background: #333333;
+    box-shadow: 0 0.2em 0.3em #888;
+    /*color: white;*/
+    padding: 0.5em;
+    padding-left: 2em;
+}
+#top_panel .caption {
+    color: #dd4814; /*Ubuntu orange*/
+    display: block;
+    float: left;
+    font: bold 0.9em Ubuntu, Verdana, sans-serif;
+    padding-right: 2em;
+    border-right: 1px solid #909090;
+}
+#top_panel a {
+    display: block;
+    float: left;
+    padding: 0 1.375em;
+    line-height: 50px;
+    text-decoration: none;
+    font: 0.8em Ubuntu, Verdana, sans-serif;
+    color: #c0c0c0;
+    border-right: 1px solid #909090;
+}
+#top_panel a:hover {
+    color: white;
 }
 
+
+#svg_container {
+  position: absolute;
+  /*border: solid 1px orange;*/
+  width: 100%;
+  top: 2em;
+  bottom: 0;
+}
+
+
+div#help_wrapper {
+  position: absolute;
+  top: 2em;
+  right: 0;
+  font: 1em Ubuntu, Verdana, sans-serif;
+  padding: 1em;
+  color: lightgray;
+}
 
 *.unselectable {
    -moz-user-select: -moz-none;
