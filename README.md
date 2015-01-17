@@ -4,3 +4,4 @@ The 'jas' is a rebus-acronim for the project 'Automata in JavaScript'. The goal 
 # jas.editor
 The 'editor' allows you create an automaton by means of a graph.
 
+Try it here: [http://dmitrymyadzelets.github.io/jas.editor/](http://dmitrymyadzelets.github.io/jas.editor/)
