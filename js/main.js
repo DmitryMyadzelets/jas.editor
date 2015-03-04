@@ -143,6 +143,43 @@
     });
 
 
+    d3.select('#btn_save_json').on('click', function () {
+        var blob = new Blob(
+            [JSON.stringify(editor.graph.get_json())],
+            {type: 'application/json'}
+        );
+        saveAs(blob, 'graph' + '.json');
+    });
+
+
+    d3.select('#btn_load_json').on('click', function () {
+        // Invoked when a file is loaded
+        function on_file_loaded() {
+            var graph = JSON.parse(this.result);
+            editor.graph.set_json(graph);
+        }
+
+        // Invoked when a file is selected in dialog
+        function on_file_selected() {
+            var f = this.files[0];
+            if (f.type.match('json')) {
+                var reader = new FileReader();
+                reader.onload = on_file_loaded;
+                reader.readAsText(f);
+            } else {
+                alert('Expected file extention \'json\'');
+            }
+        }
+
+        var input = d3.select('body').append('input')
+            .attr('type', 'file')
+            .style('opacity', '0')
+            .on('change', on_file_selected)
+            .each(function () { this.click(); })
+            .remove();
+    });
+
+
     d3.select('#btn_undo').on('click', function () {
         editor.commands.undo();
     });
