@@ -10,9 +10,9 @@ An example of how an automaton may look in the editor:
 
 Try it out: [http://dmitrymyadzelets.github.io/jas.editor/](http://dmitrymyadzelets.github.io/jas.editor/)
 
-# How to use it other project
+# How to use it in other project
 
-The editor is created such that it can be easly used in other projects related to automata. The core of the editor implements only drawing and undo/redo capabilities. The API (will be described later) allows your to extend its functionality.
+The editor is created such that it can be easily used in other projects related to automata. The core of the editor implements only drawing and undo/redo capabilities. The API (will be described later) allows your to extend its functionality.
 
 # Dependencies
 
