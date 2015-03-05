@@ -1,7 +1,22 @@
-# jas
-The 'jas' is a rebus-acronim for the project 'Automata in JavaScript'. The goal of the project is to create tools for automata theory which would work in browsers.
+# Automata Editor
 
-# jas.editor
-The 'editor' allows you create an automaton by means of a graph.
+The automata editor is intended to become:
+* A simple and fast hand-drawn-like automata design tool.
+* A base for simulators, code generators and any other automata-related project which can come into your mind.
 
-Try it here: [http://dmitrymyadzelets.github.io/jas.editor/](http://dmitrymyadzelets.github.io/jas.editor/)
+An example how an automaton may look in the editor:
+![Automaton for delayed save](./img/graph_delayed_save.png Automaton for delayed save of multiple updates)
+
+Try it out: [http://dmitrymyadzelets.github.io/jas.editor/](http://dmitrymyadzelets.github.io/jas.editor/)
+
+# How to use it other project
+
+The editor is created such that it can be easly used in other projects related to automata. The core of the editor implements only drawing and undo/redo capabilities. The API (will be described later) allows your to extend its functionality.
+
+# Dependencies
+
+The editor uses [D3.js](https://github.com/mbostock/d3) for manipulations with SVG.
+
+# Contact
+
+If you have any ideas, feedback, requests or bug reports, you can reach me at [dmitrymyadzelets@gmail.com](mailto:dmitrymyadzelets@gmail.com).
