@@ -18,6 +18,10 @@ The editor is created such that it can be easily used in other projects related 
 
 The editor uses [D3.js](https://github.com/mbostock/d3) for manipulations with SVG.
 
+# License
+
+GNU General Public License v2.0
+
 # Contact
 
 If you have any ideas, feedback, requests or bug reports, you can reach me at [dmitrymyadzelets@gmail.com](mailto:dmitrymyadzelets@gmail.com).
