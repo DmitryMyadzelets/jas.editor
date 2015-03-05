@@ -4,7 +4,7 @@ The automata editor is intended to become:
 * A simple and fast hand-drawn-like automata design tool.
 * A base for simulators, code generators and any other automata-related project which can come into your mind.
 
-An example how an automaton may look in the editor:
+An example of how an automaton may look in the editor:
 
 ![Automaton for delayed save](https://github.com/dmitrymyadzelets/jas.editor/blob/master/img/graph_delayed_save.png "Automaton for delayed save of multiple updates")
 
