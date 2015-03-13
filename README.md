@@ -1,5 +1,7 @@
 # Automata Editor
 
+*Version: 0.1.0*
+
 The automata editor is intended to become:
 * A simple and fast hand-drawn-like automata design tool.
 * A base for simulators, code generators and any other automata-related project which can come into your mind.
@@ -30,7 +32,7 @@ Create editor in the body of the document:
 
     var editor = new jas.Editor();
 
-Create the editor in a `div` container:
+Or create the editor in a `div` container:  
 
     var div = document.getElementById('editor_container');
     var editor = new jas.Editor(div);
