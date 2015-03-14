@@ -23,19 +23,25 @@ The editor is created such that it can be easily used in other projects related 
 
 Add following scripts into your HTML document:
 
+    ```html
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="./jas.editor.min.js"></script>
+    ```
 
 ## Creating the editor
 
 Create editor in the body of the document:
 
+    ```javascript
     var editor = new jas.Editor();
+    ```
 
 Or create the editor in a `div` container:  
 
+    ```javascript
     var div = document.getElementById('editor_container');
     var editor = new jas.Editor(div);
+    ```
 
 That's it. You can create and edit your automata graph.
 
