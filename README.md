@@ -23,25 +23,25 @@ The editor is created such that it can be easily used in other projects related 
 
 Add following scripts into your HTML document:
 
-    ```html
-    <script src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="./jas.editor.min.js"></script>
-    ```
+```html
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="./jas.editor.min.js"></script>
+```
 
 ## Creating the editor
 
 Create editor in the body of the document:
 
-    ```javascript
-    var editor = new jas.Editor();
-    ```
+```javascript
+var editor = new jas.Editor();
+```
 
 Or create the editor in a `div` container:  
 
-    ```javascript
-    var div = document.getElementById('editor_container');
-    var editor = new jas.Editor(div);
-    ```
+```javascript
+var div = document.getElementById('editor_container');
+var editor = new jas.Editor(div);
+```
 
 That's it. You can create and edit your automata graph.
 
@@ -71,68 +71,78 @@ Use the mouse and keyboard as follows:
 
 When your create a graph, you can get it as an object literal:
 
-    var graph = editor.graph.get_json();
+```javascript
+var graph = editor.graph.get_json();
+```
 
 Then, for instance, convert it to a string in order to store and use later:
 
-    JSON.stringify(graph);
+```javascript
+JSON.stringify(graph);
+```
 
 A new automata graph can be attached to the editor. For example, a graph with two nodes and one edge:
 
-    var graph = {
-        nodes: [{
-            x: 50,
-            y: 50,
-            text: '0'
-        }, {
-            x: 200,
-            y: 50,
-            text: '1'
-        }],
-        edges: [{
-            source: 0,
-            target: 1,
-            text: 'A'
-        }]
-    };
+```javascript
+var graph = {
+    nodes: [{
+        x: 50,
+        y: 50,
+        text: '0'
+    }, {
+        x: 200,
+        y: 50,
+        text: '1'
+    }],
+    edges: [{
+        source: 0,
+        target: 1,
+        text: 'A'
+    }]
+};
 
-    editor.graph.set_json(graph);
+editor.graph.set_json(graph);
+```
 
 ## Size of the editor
 
+```javascript
     var width = 800, height = 500;
     editor.view.size(width, height);
+```
 
 ## Styling
 
 The editor requires some styling to provide a proper visual feedback. Here is a suggested minimal content for your CSS file:
 
-    g.nodes circle {
-        cursor: pointer;
-    }
-    g.nodes circle.marked {
-        fill: none;
-    }
-    .selected, .selection {
-        fill: none;
-        stroke: black;
-        stroke-dasharray: 0.5em, 0.3em;
-        stroke-dasharray: 0.6em, 0.2em;
-    }
-    path.catch {
-        fill: none;
-        stroke: yellow;
-        stroke-width: 0.8em;
-        stroke-opacity: 0.0;
-        cursor: pointer;
-    }
-    *.unselectable {
-        -moz-user-select: -moz-none;
-        -khtml-user-select: none;
-        -webkit-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-    }
+```css
+g.nodes circle {
+    cursor: pointer;
+}
+g.nodes circle.marked {
+    fill: none;
+}
+.selected, .selection {
+    fill: none;
+    stroke: black;
+    stroke-dasharray: 0.5em, 0.3em;
+    stroke-dasharray: 0.6em, 0.2em;
+}
+path.catch {
+    fill: none;
+    stroke: yellow;
+    stroke-width: 0.8em;
+    stroke-opacity: 0.0;
+    cursor: pointer;
+}
+*.unselectable {
+    -moz-user-select: -moz-none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+```
 
 # Dependencies
 
