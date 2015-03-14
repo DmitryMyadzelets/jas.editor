@@ -21,11 +21,11 @@ The editor is created such that it can be easily used in other projects related 
 
 ## Preparation
 
-Add following scripts into your HTML document:
+Add the following scripts into your HTML document:
 
 ```html
 <script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="./jas.editor.min.js"></script>
+<script src="jas.editor.min.js"></script>
 ```
 
 ## Creating the editor

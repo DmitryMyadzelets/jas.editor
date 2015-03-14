@@ -1,0 +1,40 @@
+Bugs
++ Nodes don't appear when a new graph attached without active forces.
++ Stack of undo\redo reffers to a wrong view\objects when a new graph attached. (Make a local stack attached to the view).
+- Text editor is mouse independent. When you start edit text, and move mouse to other view, you can loose the end of text editing.
+
+
+Must do
+- Review graph's API. This API is the second main thing exposed to the users. The first one is UI of course.
+	- http://radokirov.com/graph-editor.js/
+	- https://github.com/rkirov/graph-editor.js
+	- https://github.com/0/graph-sandbox (look at predefind graphs)
++ Make 'initial' state command
+- Make export to usable formats.
+	+ SVG. What programs can accept SVG? Latex (how?), Inscape, ...
+		+ Inscape works
+	- Image
++ Make github...io page for demonstration.
+	- Describe API
+
+
+May do
+- Ideas:
+	- Selection: Shift adds to selections. Click onto already selected node doesn't change selection. Click onto not selected node with no Shift cansels already selected nodes.
+	+ When edit a text, cancel it on ESC pressed only.
+	+ use 'json' name to get and set JSON graph.
++ Replace 'new' in commands to a not reserved word
++ Use the function form of 'use strict'.
++ Too many savings to local storage while editing.
++ Implement edge movement in the model (it's in wrapper only).
+- Make on('update', function () {} ) instead of o[key] = function () {} for the events.
+- Unlink the Controller from d3 (view's implementation).
+- Make Commands and the Graph have the same methods.
+- Make a nice appearence and disappearance of nodes when they are added\removed.
++ Make nodes and edges highlighted (CSS class).
+- Make BFS or DFS plugin.
+
+
+Architecture wrt SOLID principles
+- Open Closed Principle (OSP). The nodes are always circles now, but it can be changed. Calculation of edges implies that the nodes are circles. a node should provide connection points to an edge (like in Violet UML editor), given some information from the edge (e.g. an outgoing angle, a reference to another node etc.);
+- Compose atomic undoable operations into compaund operations? E.g. Create new edge into empty space = adding an edge and a node.
