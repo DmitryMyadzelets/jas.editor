@@ -43,23 +43,23 @@ That's it. You can create and edit your automata graph.
 
 Use the mouse and keyboard as follows:
 
-Mouse:
-    Double click on empty space - creates new state
-    Click on a state and drag to another - creates new transition
-    Click on state or transition - selection
-    Ctrl + click - multi-selection
-    Hold Shift to move states and transitions
-    Double click on a state - edit its label
-    Double click on a transition- edit its label
+    Mouse:
+        Double click on empty space - creates new state
+        Click on a state and drag to another - creates new transition
+        Click on state or transition - selection
+        Ctrl + click - multi-selection
+        Hold Shift to move states and transitions
+        Double click on a state - edit its label
+        Double click on a transition- edit its label
 
-Keys:
-    Delete - deletes selected elements
-    M - marks selected states
-    Ctrl + M - unmark selected states
-    I - make selected states as initial ones (exclusively)
-    F - switch on\off force-directed layout mode
-    Ctrl + Z - undo a command
-    Ctrl + Y - redo a command
+    Keys:
+        Delete - deletes selected elements
+        M - marks selected states
+        Ctrl + M - unmark selected states
+        I - make selected states as initial ones (exclusively)
+        F - switch on\off force-directed layout mode
+        Ctrl + Z - undo a command
+        Ctrl + Y - redo a command
 
 ## Get and set your automata graph
 
