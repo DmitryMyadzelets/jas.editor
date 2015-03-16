@@ -1,6 +1,6 @@
 
 // JSLint options:
-/*global d3, View*/
+/*global View*/
 
 
 // Creates and returns an object which implements a selection rectangle
