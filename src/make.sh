@@ -8,6 +8,7 @@ elements.js \
 textarea.js \
 pan.js \
 view.js \
+view.select.js \
 select.js \
 undo.js \
 controller.js \

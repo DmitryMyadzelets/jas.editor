@@ -54,7 +54,7 @@ var control_selection = (function () {
                 rect.update(d3.mouse(this));
                 break;
             case 'mouseup':
-                view.select().by_rectangle(rect());
+                view.select.by_rectangle(rect());
                 rect.hide();
                 state = states.init;
                 break;

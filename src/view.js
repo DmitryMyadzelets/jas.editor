@@ -1,6 +1,6 @@
 
 // JSLint options:
-/*global d3, ed, elements, pan*/
+/*global d3, ed, elements, pan, Select*/
 
 // Structure of SVG tree:
 // <svg>
@@ -108,10 +108,11 @@ function View(aContainer, aGraph) {
         return View.prototype.selection_rectangle.context(svg);
     };
 
-    // Returns View.prototype.select object with context of current object
-    this.select = function () {
-        return View.prototype.select.context(self, root_group);
-    };
+    // // Returns View.prototype.select object with context of current object
+    // this.select = function () {
+    //     return View.prototype.select.context(self, root_group);
+    // };
+    this.select = new Select(this);
 
     // Handles nodes events
     this.node_handler = undefined;
