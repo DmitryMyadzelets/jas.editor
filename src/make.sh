@@ -8,8 +8,10 @@ elements.js \
 textarea.js \
 pan.js \
 view.js \
+view.node.js \
+view.edge.js \
 view.select.js \
-select.js \
+selection_rectangle.js \
 undo.js \
 controller.js \
 graph.js \

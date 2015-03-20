@@ -572,9 +572,191 @@ function pan(container) {
 }
 
 
+// JSLint options:
+/*global View*/
+
+
+/**
+ * Prototype object for the objects View.prototype.node and View.prototype.edge
+ */
+View.prototype.element = (function () {
+    "use strict";
+
+    function methods() {
+
+        function remove(d) {
+            d.view().remove();
+        }
+
+        function stress(d) {
+            d.view().select('circle').classed('stressed', true);
+        }
+
+        /**
+         * Calls function 'fun' for a single object or an array of objects
+         * @param  {Object|Array}
+         * @param  {Function} callback
+         * @param  {Object} [context] If provided, will be given instead of `this`
+         */
+        this.foreach = function (d, fun, that) {
+            that = that || this;
+            if (d instanceof Array) {
+                d.forEach(fun, that);
+            } else {
+                fun.call(that, d);
+            }
+        };
+
+        // Mouse input handler
+        this.handler = function () { return; };
+
+        this.remove = function (d) {
+            this.foreach(d, remove);
+        };
+
+        this.text = function (d) {
+            d.view().select('text').text(d.text || '');
+        };
+
+        this.stress = function (d) {
+            this.root.select('.stressed').classed('stressed', false);
+            this.foreach(d, stress, this);
+        };
+
+        /**
+         * Returns array of selected node's objects
+         * @return {Array} nodes
+         */
+        this.selected = function () {
+            var array = [];
+            this.root.selectAll('.selected').each(function (d) { array.push(d); });
+            return array;
+        };
+
+        return this;
+    }
+
+    var o = {};
+    methods.call(o);
+    return o;
+
+}());
+
+
+
+View.prototype.node = (function () {
+    "use strict";
+
+    var node = Object.create(View.prototype.element);
+
+    function methods() {
+        /**
+         * Default geometrical values
+         * @type {Number}
+         */
+        this.RADIUS = 16;
+        this.MARKED_RADIUS = this.RADIUS - 3;
+        this.INITIAL_LENGTH = this.RADIUS * 1.6;
+
+        function add(d) {
+            var g = this.root.append('g').datum(d)
+                .on('mousedown', this.handler)
+                .on('mouseup', this.handler)
+                .on('mouseover', this.handler)
+                .on('mouseout', this.handler)
+                .on('dblclick', this.handler);
+
+            g.append('circle').attr('r', this.RADIUS);
+
+            d.view = function () { return g; };
+
+            g.append('text').attr('alignment-baseline', 'center');
+            this.text(d);
+
+            this.move(d);
+            this.mark(d);
+            this.initial(d);
+        }
+
+        function move(d) {
+            d.view().attr('transform', "translate(" + d.x + "," + d.y + ")");
+        }
+
+        function mark(d) {
+            var view = d.view();
+            var marked = view.select('circle.marked');
+            if (marked.empty()) {
+                if (d.marked) {
+                    view.append('circle')
+                        .attr('r', this.MARKED_RADIUS)
+                        .classed('marked', true);
+                }
+            } else {
+                if (!d.marked) {
+                    marked.remove();
+                }
+            }
+        }
+
+        function initial(d) {
+            var view = d.view();
+            var init = view.select('path.edge');
+            if (init.empty()) {
+                if (d.initial) {
+                    view.append('path')
+                        .attr('class', 'edge')
+                        .attr('marker-end', 'url(#marker-arrow)')
+                        .attr('d', 'M' + (-this.RADIUS - this.INITIAL_LENGTH) + ',0L' + (-this.RADIUS) + ',0');
+                }
+            } else {
+                if (!d.initial) {
+                    init.remove();
+                }
+            }
+        }
+
+        /**
+         * Factory constructor
+         * @param  {Object} root d3 selection
+         * @return {Object} node namespace object to work with nodes
+         */
+        this.create = function (root) {
+            var o = Object.create(node);
+            o.root = root.append('g').attr('class', 'nodes');
+            return o;
+        };
+
+        this.add = function (d) {
+            this.foreach(d, add);
+        };
+
+        this.move = function (d) {
+            this.foreach(d, move);
+        };
+
+        this.mark = function (d) {
+            this.foreach(d, mark);
+        };
+
+        this.initial = function (d) {
+            this.foreach(d, initial);
+        };
+
+        this.select = function (d, val) {
+            val = val === undefined ? true : !!val;
+            this.foreach(d, function (d) {
+                d.view().select('circle').classed('selected', val);
+            });
+        };
+
+    }
+    methods.call(node);
+
+    return node;
+}());
 
 // JSLint options:
-/*global d3, ed, elements, pan*/
+/*global d3, ed, elements, pan, Select*/
 
 // Structure of SVG tree:
 // <svg>
@@ -682,13 +864,12 @@ function View(aContainer, aGraph) {
         return View.prototype.selection_rectangle.context(svg);
     };
 
-    // Returns View.prototype.select object with context of current object
-    this.select = function () {
-        return View.prototype.select.context(self, root_group);
-    };
+    // // Returns View.prototype.select object with context of current object
+    // this.select = function () {
+    //     return View.prototype.select.context(self, root_group);
+    // };
+    this.select = new Select(this);
 
-    // Handles nodes events
-    this.node_handler = undefined;
     // Handles edge events
     this.edge_handler = undefined;
     // Handles plane (out of other elements) events
@@ -730,7 +911,7 @@ function View(aContainer, aGraph) {
     var root_group = svg.append('g');
 
     this.transform = function () {
-        self.node.attr('transform', elements.get_node_transformation);
+        // self.node.attr('transform', elements.get_node_transformation);
         self.edge.each(self.transform_edge);
     };
 
@@ -764,7 +945,10 @@ function View(aContainer, aGraph) {
         return fn;
     }());
 
-    this.node = root_group.append('g').attr('class', 'nodes').selectAll('g');
+
+    this.node = View.prototype.node.create(root_group);
+
+    // this.node = root_group.append('g').attr('class', 'nodes').selectAll('g');
     this.edge = root_group.append('g').attr('class', 'edges').selectAll('g');
 
     this.pan = pan(root_group);
@@ -816,11 +1000,11 @@ function view_methods() {
     }
 
 
-    function update_nodes() {
-        this.node = this.node.data(this.graph().nodes, key);
-        this.node.enter().call(elements.add_node, this.node_handler);
-        this.node.exit().remove();
-    }
+    // function update_nodes() {
+    //     this.node = this.node.data(this.graph().nodes, key);
+    //     this.node.enter().call(elements.add_node, this.node_handler);
+    //     this.node.exit().remove();
+    // }
 
 
     function update_edges() {
@@ -831,14 +1015,14 @@ function view_methods() {
 
 
     // Return whether graph nodes have coordnates
-    function has_no_coordinates(nodes) {
-        var ret = false;
-        nodes.forEach(function (v, index) {
-            if (v.x === undefined) { v.x = index; ret = true; }
-            if (v.y === undefined) { v.y = index; ret = true; }
-        });
-        return ret;
-    }
+    // function has_no_coordinates(nodes) {
+    //     var ret = false;
+    //     nodes.forEach(function (v, index) {
+    //         if (v.x === undefined) { v.x = index; ret = true; }
+    //         if (v.y === undefined) { v.y = index; ret = true; }
+    //     });
+    //     return ret;
+    // }
 
     // Returns whether at least one edge reffers to the nodes by indexe rather then objects
     // function has_indexes(edges) {
@@ -863,13 +1047,8 @@ function view_methods() {
             delete_keys(this._graph.nodes, 'uid');
             delete_keys(this._graph.edges, 'uid');
 
-            // Replace indexes by nodes in each edge.[source, target]
-            var self = this;
-            this._graph.edges.forEach(function (edge) {
-                if (typeof edge.source === "number") { edge.source = self._graph.nodes[edge.source]; }
-                if (typeof edge.target === "number") { edge.target = self._graph.nodes[edge.target]; }
-            });
-            if (has_no_coordinates(this._graph.nodes)) { this.spring(true); }
+            // if (has_no_coordinates(this._graph.nodes)) { this.spring(true); }
+            this.node.add(this._graph.nodes);
             this.update();
         }
         return this._graph;
@@ -888,9 +1067,9 @@ function view_methods() {
     this.update = function () {
         var is_spring = this.spring();
         if (is_spring) { this.spring(false); }
-        update_nodes.call(this);
+        // update_nodes.call(this);
         update_edges.call(this);
-        this.force.nodes(this._graph.nodes).links(this._graph.edges);
+        // this.force.nodes(this._graph.nodes).links(this._graph.edges);
         if (is_spring) { this.spring(true); }
 
         var self = this;
@@ -904,14 +1083,14 @@ function view_methods() {
 
 
 
-    this.node_text = function (d, text) {
-        filter(this.node, d).select('text').text(text);
-    };
+    // this.node_text = function (d, text) {
+    //     filter(this.node, d).select('text').text(text);
+    // };
 
-    this.mark_node = function (d) {
-        var nodes = filter(this.node, d);
-        nodes.call(elements.mark_node);
-    };
+    // this.mark_node = function (d) {
+    //     var nodes = filter(this.node, d);
+    //     nodes.call(elements.mark_node);
+    // };
 
 
     this.edge_text = function (d, text) {
@@ -926,13 +1105,13 @@ function view_methods() {
     // Methods for visual selection
 
     // Adds/removes a CSS class for node[s] to show them selected
-    this.select_node = function (d, val) {
-        var self = this;
-        val = val === undefined ? true : !!val;
-        foreach(d, function (v) {
-            filter(self.node, v).select('circle').classed('selected', val);
-        });
-    };
+    // this.select_node = function (d, val) {
+    //     var self = this;
+    //     val = val === undefined ? true : !!val;
+    //     foreach(d, function (v) {
+    //         filter(self.node, v).select('circle').classed('selected', val);
+    //     });
+    // };
 
 
     // Adds/removes a CSS class for edge[s] to show them selected
@@ -945,12 +1124,12 @@ function view_methods() {
     };
 
 
-    this.selected_nodes = function () {
-        var ret = [];
-        var nodes = this.node.select('.selected');
-        nodes.each(function (d) { ret.push(d); });
-        return ret;
-    };
+    // this.selected_nodes = function () {
+    //     var ret = [];
+    //     var nodes = this.node.select('.selected');
+    //     nodes.each(function (d) { ret.push(d); });
+    //     return ret;
+    // };
 
 
     this.selected_edges = function () {
@@ -967,12 +1146,12 @@ function view_methods() {
     };
 
 
-    this.initial = function (d) {
-        // Remove all initial states
-        this.node.selectAll('path.edge').remove();
-        // Add initial states
-        elements.initial(filter(this.node, d));
-    };
+    // this.initial = function (d) {
+    //     // Remove all initial states
+    //     this.node.selectAll('path.edge').remove();
+    //     // Add initial states
+    //     elements.initial(filter(this.node, d));
+    // };
 
 
     this.transform_edge = function (d) {
@@ -984,13 +1163,13 @@ function view_methods() {
             .attr('y', d.ty);
     };
 
-    this.stress_node = function (d) {
-        var node = this.node;
-        node.select('.stressed').classed('stressed', false);
-        foreach(d, function (v) {
-            filter(node, v).select('circle').classed('stressed', true);
-        });
-    };
+    // this.stress_node = function (d) {
+    //     var node = this.node;
+    //     node.select('.stressed').classed('stressed', false);
+    //     foreach(d, function (v) {
+    //         filter(node, v).select('circle').classed('stressed', true);
+    //     });
+    // };
 
     this.stress_edge = function (d) {
         var edge = this.edge;
@@ -1006,8 +1185,50 @@ view_methods.call(View.prototype);
 
 
 
+/**
+ * Creates an instance of Select class
+ * Incapsulates the nodes and edges selection functionality
+ */
+var Select = (function () {
+    "use strict";
+
+    function point_in_rectangle(x, y, r) {
+        return x > r[0] && x < r[2] && y > r[1] && y < r[3];
+    }
+
+    var constructor = function (aView) {
+        this.view = aView;
+    };
+
+    // Updates graphical appearance of selected_nodes nodes
+    constructor.prototype.by_rectangle = function (r) {
+        var view = this.view;
+        // Correct coordinates according to the current panoram
+        var p = view.pan();
+        r[0] -=  p[0];
+        r[2] -=  p[0];
+        r[1] -=  p[1];
+        r[3] -=  p[1];
+        var nodes = view._graph.nodes.filter(function (d) {
+            return point_in_rectangle(d.x, d.y, r);
+        });
+        view.node.select(nodes);
+
+        view.edge.each(function (d) {
+            // Check if both start and and points of edge 
+            // are in the selection
+            if (point_in_rectangle(d.x1, d.y1, r) &&
+                    point_in_rectangle(d.x2, d.y2, r)) {
+                view.select_edge(d);
+            }
+        });
+    };
+
+    return constructor;
+}());
+
 // JSLint options:
-/*global d3, View*/
+/*global View*/
 
 
 // Creates and returns an object which implements a selection rectangle
@@ -1063,52 +1284,6 @@ View.prototype.selection_rectangle = (function () {
     };
 
     return fnc;
-}());
-
-
-
-// This object contains methods to select nodes and edges of the graph
-View.prototype.select = (function () {
-    var nodes = [];
-    var edges = [];
-
-    function point_in_rectangle(x, y, r) {
-        return x > r[0] && x < r[2] && y > r[1] && y < r[3];
-    }
-
-    var view;
-    var svg;
-
-    return {
-        context : function (a_view, a_svg) {
-            view = a_view;
-            svg = a_svg;
-            return this;
-        },
-        // Updates graphical appearance of selected_nodes nodes
-        by_rectangle : function (r) {
-            // Correct coordinates according to the current panoram
-            var p = view.pan();
-            r[0] -=  p[0];
-            r[2] -=  p[0];
-            r[1] -=  p[1];
-            r[3] -=  p[1];
-            view.node.each(function (d) {
-                // Check if center of the node is in the selection rectange
-                if (point_in_rectangle(d.x, d.y, r)) {
-                    view.select_node(d);
-                }
-            });
-            view.edge.each(function (d) {
-                // Check if both start and and points of edge 
-                // are in the selection
-                if (point_in_rectangle(d.x1, d.y1, r) &&
-                        point_in_rectangle(d.x2, d.y2, r)) {
-                    view.select_edge(d);
-                }
-            });
-        }
-    };
 }());
 
 
@@ -1359,7 +1534,7 @@ var control_selection = (function () {
                 rect.update(d3.mouse(this));
                 break;
             case 'mouseup':
-                view.select().by_rectangle(rect());
+                view.select.by_rectangle(rect());
                 rect.hide();
                 state = states.init;
                 break;
@@ -1392,9 +1567,9 @@ var control_nodes_drag = (function () {
         ready : function (view) {
             switch (d3.event.type) {
             case 'mousemove':
-                // Remember nodes coordinates for undo the command
+                // Remember nodes coordinates to undo the command
                 from_xy.length = 0;
-                nodes = view.selected_nodes();
+                nodes = view.node.selected();
                 nodes.forEach(function (d) { d.fixed = true; from_xy.push(d.x, d.y); });
                 state = states.update;
                 break;
@@ -1406,7 +1581,7 @@ var control_nodes_drag = (function () {
         update : function (view) {
             switch (d3.event.type) {
             case 'mousemove':
-                // How far we move the nodes
+                // How far we've moved the nodes
                 xy = mouse;
                 mouse = view.pan.mouse();
                 xy[0] = mouse[0] - xy[0];
@@ -1527,7 +1702,7 @@ var control_edge_drag = (function () {
                 commands.add_node(node_d);
                 view.unselect_all();
                 view.select_edge(edge_d);
-                view.select_node(drag_target ? edge_d.target : edge_d.source);
+                view.node.select(drag_target ? edge_d.target : edge_d.source);
                 view.spring.on();
                 state = states.init;
                 break;
@@ -1647,7 +1822,7 @@ var Controller = (function () {
             if (d3.event.type === 'keydown') {
                 switch (d3.event.keyCode) {
                 case 46: // Delete
-                    nodes = view.selected_nodes();
+                    nodes = view.node.selected();
                     // Get incoming and outgoing edges of deleted nodes, joined with selected edges 
                     edges = view.selected_edges();
                     edges = edges.concat(commands.graph.edge.adjacent(nodes).filter(
@@ -1669,11 +1844,11 @@ var Controller = (function () {
                 case 73: // I
                     // Mark a selected state as the initial one
                     commands.start().initial(view._graph.nodes.filter(function (d) { return !!d.initial; }),
-                        view.selected_nodes());
+                        view.node.selected());
                     break;
                 case 77: // M
                     // Mark selected states
-                    nodes = view.selected_nodes();
+                    nodes = view.node.selected();
                     if (mode_add()) {
                         commands.start().unmark_node(nodes);
                     } else {
@@ -1694,8 +1869,18 @@ var Controller = (function () {
                     }
                     state = states.wait_for_keyup;
                     break;
-                // default:
-                //     console.log('Key', d3.event.keyCode);
+                case 32:
+                    window.test_node = { x: 50, y: 50, initial: 1};
+                    view._node.add(window.test_node);
+                    break;
+                case 68:
+                    // view._node.remove([window.test_node]);
+                    delete window.test_node.initial;
+                    view._node.initial([window.test_node]);
+                    view._node.stress([window.test_node]);
+                    break;
+                default:
+                    console.log('Key', d3.event.keyCode);
                 }
             } else {
                 switch (source) {
@@ -1710,7 +1895,7 @@ var Controller = (function () {
                         // Create new node
                         var node = { x : mouse[0], y : mouse[1] };
                         commands.start().add_node(node);
-                        view.select_node(node);
+                        view.node.select(node);
                         break;
                     case 'mousedown':
                         if (mode_move()) {
@@ -1728,16 +1913,16 @@ var Controller = (function () {
                     case 'mousedown':
                         // Selection
                         if (mode_move()) {
-                            view.select_node(d);
+                            view.node.select(d);
                         } else {
                             // XOR selection mode
                             if (mode_add()) {
                                 // Invert selection of the node
-                                view.select_node(d, view.selected_nodes().indexOf(d) < 0);
+                                view.node.select(d, view.node.selected().indexOf(d) < 0);
                             } else {
                                 // AND selection
                                 view.unselect_all();
-                                view.select_node(d);
+                                view.node.select(d);
                             }
                         }
                         // Drag the node or create new edge
@@ -1887,7 +2072,7 @@ var Controller = (function () {
         // Sets event handlers for the given View
         var that = this;
         // Handles nodes events
-        this.view.node_handler = function () {
+        this.view.node.handler = function () {
             context.call(that, 'node');
             event.apply(this, arguments);
         };
@@ -2260,22 +2445,22 @@ function wrap(graph, aView) {
     function update_view() {
         view.update();
     }
+    //    object       key          hook function       this
+    after(graph.node, 'add',        view.node.add,      view.node);
+    after(graph.node, 'remove',     view.node.remove,   view.node);
+    after(graph.node, 'text',       view.node.text,     view.node);
+    after(graph.node, 'shift',      view.node.move,     view.node);
+    after(graph.node, 'move',       view.node.move,     view.node);
+    after(graph.node, 'mark',       view.node.mark,     view.node);
+    after(graph.node, 'unmark',     view.node.mark,     view.node);
+    after(graph.node, 'initial',    view.node.initial,  view.node);
+    after(graph.node, 'stress',     view.node.stress,   view.node);
 
-    after(graph.node, 'add', update_view);
-    after(graph.node, 'remove', update_view);
-    after(graph.node, 'text', view.node_text.bind(view));
-    after(graph.node, 'shift', view.transform);
-    after(graph.node, 'move', view.transform);
-    after(graph.node, 'mark', view.mark_node.bind(view));
-    after(graph.node, 'unmark', view.mark_node.bind(view));
-    after(graph.node, 'initial', view.initial.bind(view));
-    after(graph.node, 'stress', view.stress_node.bind(view));
-
-    after(graph.edge, 'add', update_view);
-    after(graph.edge, 'remove', update_view);
-    after(graph.edge, 'text', view.edge_text.bind(view));
-    after(graph.edge, 'move', update_view);
-    after(graph.edge, 'stress', view.stress_edge.bind(view));
+    after(graph.edge, 'add',        update_view);
+    after(graph.edge, 'remove',     update_view);
+    after(graph.edge, 'text',       view.edge_text.bind(view));
+    after(graph.edge, 'move',       update_view);
+    after(graph.edge, 'stress',     view.stress_edge.bind(view));
 
     return graph;
 }

@@ -6,7 +6,7 @@
 var elements = {};
 
 var NODE_RADIUS = 16;
-var INITIAL_LENGTH = NODE_RADIUS * 1.6;
+// var INITIAL_LENGTH = NODE_RADIUS * 1.6;
 //
 // Methods to calculate loop, stright and curved lines for links
 // 
@@ -146,80 +146,80 @@ elements.get_edge_transformation = (function () {
 }());
 
 
-var b = true;
+// var b = true;
 
-elements.get_node_transformation = function (d) {
-    if (!d || d.x === undefined || d.y === undefined) { return ''; }
-    return "translate(" + d.x + "," + d.y + ")";
-};
-
-
-
-function node_radius(d) {
-    if (d && d.r) {
-        return d.r;
-    }
-    return NODE_RADIUS;
-}
-
-function node_marked_radius(d) {
-    if (d && d.r) {
-        return d.r;
-    }
-    return NODE_RADIUS - 3;
-}
-
-elements.mark_node = function (selection) {
-    // Mark what is not marked already
-    // Note that we don't mark nodes which are marked already
-    selection
-        .filter(function (d) { return !!d.marked && d3.select(this).select('circle.marked').empty(); })
-        .append('circle')
-        .attr('r', node_marked_radius)
-        .classed('marked', true);
-    // Unmark    
-    selection.filter(function (d) { return !d.marked; })
-        .selectAll('circle.marked')
-        .remove();
-};
+// elements.get_node_transformation = function (d) {
+//     if (!d || d.x === undefined || d.y === undefined) { return ''; }
+//     return "translate(" + d.x + "," + d.y + ")";
+// };
 
 
-// Adds\removes elements which make a node look as the inital state
-elements.initial = function (selection, show) {
-    if (arguments.length < 2 || !!show) {
-        selection.append('path')
-            .attr('class', 'edge')
-            .attr('marker-end', 'url(#marker-arrow)')
-            .attr('d', function () { return 'M' + (-NODE_RADIUS - INITIAL_LENGTH) + ',0L' + (-NODE_RADIUS) + ',0'; });
-        // selection.classed('initial', false);
-    } else {
-        selection.select('path.edge').remove();
-    }
-};
+
+// function node_radius(d) {
+//     if (d && d.r) {
+//         return d.r;
+//     }
+//     return NODE_RADIUS;
+// }
+
+// function node_marked_radius(d) {
+//     if (d && d.r) {
+//         return d.r;
+//     }
+//     return NODE_RADIUS - 3;
+// }
+
+// elements.mark_node = function (selection) {
+//     // Mark what is not marked already
+//     // Note that we don't mark nodes which are marked already
+//     selection
+//         .filter(function (d) { return !!d.marked && d3.select(this).select('circle.marked').empty(); })
+//         .append('circle')
+//         .attr('r', node_marked_radius)
+//         .classed('marked', true);
+//     // Unmark    
+//     selection.filter(function (d) { return !d.marked; })
+//         .selectAll('circle.marked')
+//         .remove();
+// };
 
 
-// Adds SVG elements representing graph nodes
-elements.add_node = function (selection, handler) {
-    var g = selection.append('g')
-        .attr('transform', elements.get_node_transformation)
-        .on('mousedown', handler)
-        .on('mouseup', handler)
-        .on('mouseover', handler)
-        .on('mouseout', handler)
-        .on('dblclick', handler);
+// // Adds\removes elements which make a node look as the inital state
+// elements.initial = function (selection, show) {
+//     if (arguments.length < 2 || !!show) {
+//         selection.append('path')
+//             .attr('class', 'edge')
+//             .attr('marker-end', 'url(#marker-arrow)')
+//             .attr('d', function () { return 'M' + (-NODE_RADIUS - INITIAL_LENGTH) + ',0L' + (-NODE_RADIUS) + ',0'; });
+//         // selection.classed('initial', false);
+//     } else {
+//         selection.select('path.edge').remove();
+//     }
+// };
 
-    g.append('circle')
-        .attr('r', node_radius);
 
-    g.call(elements.mark_node);
+// // Adds SVG elements representing graph nodes
+// elements.add_node = function (selection, handler) {
+//     var g = selection.append('g')
+//         .attr('transform', elements.get_node_transformation)
+//         .on('mousedown', handler)
+//         .on('mouseup', handler)
+//         .on('mouseover', handler)
+//         .on('mouseout', handler)
+//         .on('dblclick', handler);
 
-    g.append('text')
-        // .style('text-anchor', 'middle')
-        .attr('alignment-baseline', 'center')
-        .text(function (d) { return d.text || ''; });
+//     g.append('circle')
+//         .attr('r', node_radius);
 
-    elements.initial(g.filter(function (d) { return !!d.initial; }));
-};
+//     g.call(elements.mark_node);
+
+//     g.append('text')
+//         // .style('text-anchor', 'middle')
+//         .attr('alignment-baseline', 'center')
+//         .text(function (d) { return d.text || ''; });
+
+//     elements.initial(g.filter(function (d) { return !!d.initial; }));
+// };
 
 
 

@@ -87,9 +87,9 @@ var control_nodes_drag = (function () {
         ready : function (view) {
             switch (d3.event.type) {
             case 'mousemove':
-                // Remember nodes coordinates for undo the command
+                // Remember nodes coordinates to undo the command
                 from_xy.length = 0;
-                nodes = view.selected_nodes();
+                nodes = view.node.selected();
                 nodes.forEach(function (d) { d.fixed = true; from_xy.push(d.x, d.y); });
                 state = states.update;
                 break;
@@ -101,7 +101,7 @@ var control_nodes_drag = (function () {
         update : function (view) {
             switch (d3.event.type) {
             case 'mousemove':
-                // How far we move the nodes
+                // How far we've moved the nodes
                 xy = mouse;
                 mouse = view.pan.mouse();
                 xy[0] = mouse[0] - xy[0];
@@ -140,7 +140,7 @@ var control_nodes_drag = (function () {
 var control_edge_drag = (function () {
     "use strict";
 
-    var mouse, d_source, node_d, edge_d, drag_target, edge_svg, from, exists;
+    var mouse, d_source, node_d, edge_d, drag_target, from, exists;
 
     var state, states = {
         init : function (view, source, d) {
@@ -174,7 +174,6 @@ var control_edge_drag = (function () {
                 edge_d = { source : d_source, target : node_d };
                 commands.start().add_edge(edge_d);
                 drag_target = true;
-                edge_svg = view.edge_by_data(edge_d).selectAll('path');
                 view.spring.off();
                 state = states.drag_edge;
                 break;
@@ -197,9 +196,8 @@ var control_edge_drag = (function () {
                     }
                     // edge_d.text = d.text;
                     commands.start().move_edge(edge_d, from, [edge_d.source, edge_d.target]);
-                    edge_svg = view.edge_by_data(edge_d).selectAll('path');
                     view.unselect_all();
-                    view.select_edge(edge_d);
+                    view.edge.select(edge_d);
                     view.spring.off();
                     state = states.drag_edge;
                     break;
@@ -215,14 +213,15 @@ var control_edge_drag = (function () {
                 mouse = view.pan.mouse();
                 node_d.x = mouse[0];
                 node_d.y = mouse[1];
-                edge_svg.attr('d', elements.get_edge_transformation(edge_d));
+                view.edge.move(edge_d);
+                // edge_svg.attr('d', elements.get_edge_transformation(edge_d));
                 break;
             case 'mouseup':
                 delete node_d.r; // in order to use default radius
                 commands.add_node(node_d);
                 view.unselect_all();
-                view.select_edge(edge_d);
-                view.select_node(drag_target ? edge_d.target : edge_d.source);
+                view.edge.select(edge_d);
+                view.node.select(drag_target ? edge_d.target : edge_d.source);
                 view.spring.on();
                 state = states.init;
                 break;
@@ -258,7 +257,7 @@ var control_edge_drag = (function () {
                     }
                     if (!mode_add()) { view.unselect_all(); }
                     if (exists.length <= 1) {
-                        view.select_edge(edge_d);
+                        view.edge.select(edge_d);
                     }
                     view.spring.on();
                     state = states.init;
@@ -342,9 +341,9 @@ var Controller = (function () {
             if (d3.event.type === 'keydown') {
                 switch (d3.event.keyCode) {
                 case 46: // Delete
-                    nodes = view.selected_nodes();
+                    nodes = view.node.selected();
                     // Get incoming and outgoing edges of deleted nodes, joined with selected edges 
-                    edges = view.selected_edges();
+                    edges = view.edge.selected();
                     edges = edges.concat(commands.graph.edge.adjacent(nodes).filter(
                         function (node) { return edges.indexOf(node) < 0; }
                     ));
@@ -364,11 +363,11 @@ var Controller = (function () {
                 case 73: // I
                     // Mark a selected state as the initial one
                     commands.start().initial(view._graph.nodes.filter(function (d) { return !!d.initial; }),
-                        view.selected_nodes());
+                        view.node.selected());
                     break;
                 case 77: // M
                     // Mark selected states
-                    nodes = view.selected_nodes();
+                    nodes = view.node.selected();
                     if (mode_add()) {
                         commands.start().unmark_node(nodes);
                     } else {
@@ -389,8 +388,18 @@ var Controller = (function () {
                     }
                     state = states.wait_for_keyup;
                     break;
-                // default:
-                //     console.log('Key', d3.event.keyCode);
+                case 32:
+                    window.test_node = { x: 50, y: 50, initial: 1};
+                    view._node.add(window.test_node);
+                    break;
+                case 68:
+                    // view._node.remove([window.test_node]);
+                    delete window.test_node.initial;
+                    view._node.initial([window.test_node]);
+                    view._node.stress([window.test_node]);
+                    break;
+                default:
+                    console.log('Key', d3.event.keyCode);
                 }
             } else {
                 switch (source) {
@@ -405,7 +414,7 @@ var Controller = (function () {
                         // Create new node
                         var node = { x : mouse[0], y : mouse[1] };
                         commands.start().add_node(node);
-                        view.select_node(node);
+                        view.node.select(node);
                         break;
                     case 'mousedown':
                         if (mode_move()) {
@@ -423,16 +432,16 @@ var Controller = (function () {
                     case 'mousedown':
                         // Selection
                         if (mode_move()) {
-                            view.select_node(d);
+                            view.node.select(d);
                         } else {
                             // XOR selection mode
                             if (mode_add()) {
                                 // Invert selection of the node
-                                view.select_node(d, view.selected_nodes().indexOf(d) < 0);
+                                view.node.select(d, view.node.selected().indexOf(d) < 0);
                             } else {
                                 // AND selection
                                 view.unselect_all();
-                                view.select_node(d);
+                                view.node.select(d);
                             }
                         }
                         // Drag the node or create new edge
@@ -460,20 +469,20 @@ var Controller = (function () {
                     switch (d3.event.type) {
                     case 'mousedown':
                         // Conditional selection
-                        edges = view.selected_edges();
+                        edges = view.edge.selected();
                         // OR selection
                         if (mode_move()) {
-                            view.select_edge(d);
-                            edges = view.selected_edges();
+                            view.edge.select(d);
+                            edges = view.edge.selected();
                         } else {
                             // XOR selection mode
                             if (mode_add()) {
                                 // Invert selection of the node
-                                view.select_edge(d, edges.indexOf(d) < 0);
+                                view.edge.select(d, edges.indexOf(d) < 0);
                             } else {
                                 // AND selection
                                 view.unselect_all();
-                                view.select_edge(d);
+                                view.edge.select(d);
                             }
                         }
                         control_edge_drag.call(this, view, source, d);
@@ -582,13 +591,13 @@ var Controller = (function () {
         // Sets event handlers for the given View
         var that = this;
         // Handles nodes events
-        this.view.node_handler = function () {
+        this.view.node.handler = function () {
             context.call(that, 'node');
             event.apply(this, arguments);
         };
 
         // Handles edge events
-        this.view.edge_handler = function () {
+        this.view.edge.handler = function () {
             context.call(that, 'edge');
             event.apply(this, arguments);
         };

@@ -13,22 +13,22 @@ function wrap(graph, aView) {
     function update_view() {
         view.update();
     }
+    //    object       key          hook function       this
+    after(graph.node, 'add',        view.node.add,      view.node);
+    after(graph.node, 'remove',     view.node.remove,   view.node);
+    after(graph.node, 'text',       view.node.text,     view.node);
+    after(graph.node, 'shift',      view.node.move,     view.node);
+    after(graph.node, 'move',       view.node.move,     view.node);
+    after(graph.node, 'mark',       view.node.mark,     view.node);
+    after(graph.node, 'unmark',     view.node.mark,     view.node);
+    after(graph.node, 'initial',    view.node.initial,  view.node);
+    after(graph.node, 'stress',     view.node.stress,   view.node);
 
-    after(graph.node, 'add', update_view);
-    after(graph.node, 'remove', update_view);
-    after(graph.node, 'text', view.node_text.bind(view));
-    after(graph.node, 'shift', view.transform);
-    after(graph.node, 'move', view.transform);
-    after(graph.node, 'mark', view.mark_node.bind(view));
-    after(graph.node, 'unmark', view.mark_node.bind(view));
-    after(graph.node, 'initial', view.initial.bind(view));
-    after(graph.node, 'stress', view.stress_node.bind(view));
-
-    after(graph.edge, 'add', update_view);
-    after(graph.edge, 'remove', update_view);
-    after(graph.edge, 'text', view.edge_text.bind(view));
-    after(graph.edge, 'move', update_view);
-    after(graph.edge, 'stress', view.stress_edge.bind(view));
+    after(graph.edge, 'add',        view.edge.add,      view.edge);
+    after(graph.edge, 'remove',     view.edge.remove,   view.edge);
+    after(graph.edge, 'text',       view.edge.text,     view.edge);
+    after(graph.edge, 'move',       view.edge.move,     view.edge);
+    after(graph.edge, 'stress',     view.edge.stress,   view.edge);
 
     return graph;
 }

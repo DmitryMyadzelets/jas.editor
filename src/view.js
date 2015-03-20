@@ -114,8 +114,6 @@ function View(aContainer, aGraph) {
     // };
     this.select = new Select(this);
 
-    // Handles nodes events
-    this.node_handler = undefined;
     // Handles edge events
     this.edge_handler = undefined;
     // Handles plane (out of other elements) events
@@ -157,7 +155,7 @@ function View(aContainer, aGraph) {
     var root_group = svg.append('g');
 
     this.transform = function () {
-        self.node.attr('transform', elements.get_node_transformation);
+        // self.node.attr('transform', elements.get_node_transformation);
         self.edge.each(self.transform_edge);
     };
 
@@ -191,8 +189,12 @@ function View(aContainer, aGraph) {
         return fn;
     }());
 
-    this.node = root_group.append('g').attr('class', 'nodes').selectAll('g');
-    this.edge = root_group.append('g').attr('class', 'edges').selectAll('g');
+
+    this.node = View.prototype.node.create(root_group);
+    this.edge = View.prototype.edge.create(root_group);
+
+    // this.node = root_group.append('g').attr('class', 'nodes').selectAll('g');
+    // this.edge = root_group.append('g').attr('class', 'edges').selectAll('g');
 
     this.pan = pan(root_group);
 
@@ -211,61 +213,61 @@ function view_methods() {
 
     // Helpers
     // Calls function 'fun' for a single datum or an array of data
-    function foreach(d, fun) {
-        if (d instanceof Array) {
-            d.forEach(fun);
-        } else {
-            fun(d);
-        }
-    }
+    // function foreach(d, fun) {
+    //     if (d instanceof Array) {
+    //         d.forEach(fun);
+    //     } else {
+    //         fun(d);
+    //     }
+    // }
 
     // Returns an unique identifier
-    var uid = (function () {
-        var id = 0;
-        return function () {
-            return id++;
-        };
-    }());
+    // var uid = (function () {
+    //     var id = 0;
+    //     return function () {
+    //         return id++;
+    //     };
+    // }());
 
 
     // Returns key of the datum
-    function key(d) {
-        if (d.uid === undefined) { d.uid = uid(); }
-        return d.uid;
-    }
+    // function key(d) {
+    //     if (d.uid === undefined) { d.uid = uid(); }
+    //     return d.uid;
+    // }
 
     // Returns subselection filtered w.r.t 'd' or [d, ..., d]
-    function filter(selection, d) {
-        if (d instanceof Array) {
-            return selection.filter(function (v) { return d.indexOf(v) >= 0; });
-        }
-        return selection.filter(function (v) { return v === d; });
-    }
+    // function filter(selection, d) {
+    //     if (d instanceof Array) {
+    //         return selection.filter(function (v) { return d.indexOf(v) >= 0; });
+    //     }
+    //     return selection.filter(function (v) { return v === d; });
+    // }
 
 
-    function update_nodes() {
-        this.node = this.node.data(this.graph().nodes, key);
-        this.node.enter().call(elements.add_node, this.node_handler);
-        this.node.exit().remove();
-    }
+    // function update_nodes() {
+    //     this.node = this.node.data(this.graph().nodes, key);
+    //     this.node.enter().call(elements.add_node, this.node_handler);
+    //     this.node.exit().remove();
+    // }
 
 
-    function update_edges() {
-        this.edge = this.edge.data(this.graph().edges, key);
-        this.edge.enter().call(elements.add_edge, this.edge_handler);
-        this.edge.exit().remove();
-    }
+    // function update_edges() {
+    //     this.edge = this.edge.data(this.graph().edges, key);
+    //     this.edge.enter().call(elements.add_edge, this.edge_handler);
+    //     this.edge.exit().remove();
+    // }
 
 
     // Return whether graph nodes have coordnates
-    function has_no_coordinates(nodes) {
-        var ret = false;
-        nodes.forEach(function (v, index) {
-            if (v.x === undefined) { v.x = index; ret = true; }
-            if (v.y === undefined) { v.y = index; ret = true; }
-        });
-        return ret;
-    }
+    // function has_no_coordinates(nodes) {
+    //     var ret = false;
+    //     nodes.forEach(function (v, index) {
+    //         if (v.x === undefined) { v.x = index; ret = true; }
+    //         if (v.y === undefined) { v.y = index; ret = true; }
+    //     });
+    //     return ret;
+    // }
 
     // Returns whether at least one edge reffers to the nodes by indexe rather then objects
     // function has_indexes(edges) {
@@ -276,9 +278,9 @@ function view_methods() {
 
 
     // Removes key for each element of the array
-    function delete_keys(array, key) {
-        array.forEach(function (o) { delete o[key]; });
-    }
+    // function delete_keys(array, key) {
+    //     array.forEach(function (o) { delete o[key]; });
+    // }
 
     // Returns a graph attached to the view.
     // If new graph is given, attches it to the view.
@@ -287,17 +289,13 @@ function view_methods() {
             this._graph = null;
             this._graph = graph || get_empty_graph();
             // Delete old 'uid' keys
-            delete_keys(this._graph.nodes, 'uid');
-            delete_keys(this._graph.edges, 'uid');
+            // delete_keys(this._graph.nodes, 'uid');
+            // delete_keys(this._graph.edges, 'uid');
 
-            // Replace indexes by nodes in each edge.[source, target]
-            var self = this;
-            this._graph.edges.forEach(function (edge) {
-                if (typeof edge.source === "number") { edge.source = self._graph.nodes[edge.source]; }
-                if (typeof edge.target === "number") { edge.target = self._graph.nodes[edge.target]; }
-            });
-            if (has_no_coordinates(this._graph.nodes)) { this.spring(true); }
-            this.update();
+            // if (has_no_coordinates(this._graph.nodes)) { this.spring(true); }
+            this.node.add(this._graph.nodes);
+            this.edge.add(this._graph.edges);
+            // this.update();
         }
         return this._graph;
     };
@@ -312,80 +310,80 @@ function view_methods() {
 
 
     // Updates SVG structure according to the graph structure
-    this.update = function () {
-        var is_spring = this.spring();
-        if (is_spring) { this.spring(false); }
-        update_nodes.call(this);
-        update_edges.call(this);
-        this.force.nodes(this._graph.nodes).links(this._graph.edges);
-        if (is_spring) { this.spring(true); }
+    // this.update = function () {
+    //     var is_spring = this.spring();
+    //     if (is_spring) { this.spring(false); }
+    //     // update_nodes.call(this);
+    //     update_edges.call(this);
+    //     // this.force.nodes(this._graph.nodes).links(this._graph.edges);
+    //     if (is_spring) { this.spring(true); }
 
-        var self = this;
-        // Identify type of edge {int} (0-straight, 1-curved, 2-loop)
-        this.edge.each(function () {
-            set_edge_type.apply(self, arguments);
-        });
+    //     var self = this;
+    //     // Identify type of edge {int} (0-straight, 1-curved, 2-loop)
+    //     this.edge.each(function () {
+    //         set_edge_type.apply(self, arguments);
+    //     });
 
-        this.transform();
-    };
-
-
-
-    this.node_text = function (d, text) {
-        filter(this.node, d).select('text').text(text);
-    };
-
-    this.mark_node = function (d) {
-        var nodes = filter(this.node, d);
-        nodes.call(elements.mark_node);
-    };
+    //     this.transform();
+    // };
 
 
-    this.edge_text = function (d, text) {
-        filter(this.edge, d).select('text').text(text);
-    };
+
+    // this.node_text = function (d, text) {
+    //     filter(this.node, d).select('text').text(text);
+    // };
+
+    // this.mark_node = function (d) {
+    //     var nodes = filter(this.node, d);
+    //     nodes.call(elements.mark_node);
+    // };
 
 
-    this.edge_by_data = function (d) {
-        return filter(this.edge, d);
-    };
+    // this.edge_text = function (d, text) {
+    //     filter(this.edge, d).select('text').text(text);
+    // };
+
+
+    // this.edge_by_data = function (d) {
+    //     return filter(this.edge, d);
+    // };
 
     // Methods for visual selection
 
     // Adds/removes a CSS class for node[s] to show them selected
-    this.select_node = function (d, val) {
-        var self = this;
-        val = val === undefined ? true : !!val;
-        foreach(d, function (v) {
-            filter(self.node, v).select('circle').classed('selected', val);
-        });
-    };
+    // this.select_node = function (d, val) {
+    //     var self = this;
+    //     val = val === undefined ? true : !!val;
+    //     foreach(d, function (v) {
+    //         filter(self.node, v).select('circle').classed('selected', val);
+    //     });
+    // };
 
 
     // Adds/removes a CSS class for edge[s] to show them selected
-    this.select_edge = function (d, val) {
-        var self = this;
-        val = val === undefined ? true : !!val;
-        foreach(d, function (v) {
-            filter(self.edge, v).select('path.edge').classed('selected', val);
-        });
-    };
+    // this.select_edge = function (d, val) {
+    //     var self = this;
+    //     val = val === undefined ? true : !!val;
+    //     foreach(d, function (v) {
+    //         filter(self.edge, v).select('path.edge').classed('selected', val);
+    //     });
+    // };
 
 
-    this.selected_nodes = function () {
-        var ret = [];
-        var nodes = this.node.select('.selected');
-        nodes.each(function (d) { ret.push(d); });
-        return ret;
-    };
+    // this.selected_nodes = function () {
+    //     var ret = [];
+    //     var nodes = this.node.select('.selected');
+    //     nodes.each(function (d) { ret.push(d); });
+    //     return ret;
+    // };
 
 
-    this.selected_edges = function () {
-        var ret = [];
-        var edges = this.edge.select('.selected');
-        edges.each(function (d) { ret.push(d); });
-        return ret;
-    };
+    // this.selected_edges = function () {
+    //     var ret = [];
+    //     var edges = this.edge.select('.selected');
+    //     edges.each(function (d) { ret.push(d); });
+    //     return ret;
+    // };
 
 
     // Removes a selection CSS class for all the nodes and edges
@@ -394,38 +392,38 @@ function view_methods() {
     };
 
 
-    this.initial = function (d) {
-        // Remove all initial states
-        this.node.selectAll('path.edge').remove();
-        // Add initial states
-        elements.initial(filter(this.node, d));
-    };
+    // this.initial = function (d) {
+    //     // Remove all initial states
+    //     this.node.selectAll('path.edge').remove();
+    //     // Add initial states
+    //     elements.initial(filter(this.node, d));
+    // };
 
 
-    this.transform_edge = function (d) {
-        var str = elements.get_edge_transformation(d);
-        var e = d3.select(this);
-        e.selectAll('path').attr('d', str);
-        e.select('text')
-            .attr('x', d.tx)
-            .attr('y', d.ty);
-    };
+    // this.transform_edge = function (d) {
+    //     var str = elements.get_edge_transformation(d);
+    //     var e = d3.select(this);
+    //     e.selectAll('path').attr('d', str);
+    //     e.select('text')
+    //         .attr('x', d.tx)
+    //         .attr('y', d.ty);
+    // };
 
-    this.stress_node = function (d) {
-        var node = this.node;
-        node.select('.stressed').classed('stressed', false);
-        foreach(d, function (v) {
-            filter(node, v).select('circle').classed('stressed', true);
-        });
-    };
+    // this.stress_node = function (d) {
+    //     var node = this.node;
+    //     node.select('.stressed').classed('stressed', false);
+    //     foreach(d, function (v) {
+    //         filter(node, v).select('circle').classed('stressed', true);
+    //     });
+    // };
 
-    this.stress_edge = function (d) {
-        var edge = this.edge;
-        edge.select('.stressed').classed('stressed', false);
-        foreach(d, function (v) {
-            filter(edge, v).select('path.edge').classed('stressed', true);
-        });
-    };
+    // this.stress_edge = function (d) {
+    //     var edge = this.edge;
+    //     edge.select('.stressed').classed('stressed', false);
+    //     foreach(d, function (v) {
+    //         filter(edge, v).select('path.edge').classed('stressed', true);
+    //     });
+    // };
 }
 
 

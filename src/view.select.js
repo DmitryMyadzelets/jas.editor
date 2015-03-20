@@ -14,7 +14,7 @@ var Select = (function () {
         this.view = aView;
     };
 
-    // Updates graphical appearance of selected_nodes nodes
+    // Updates graphical appearance of selected nodes
     constructor.prototype.by_rectangle = function (r) {
         var view = this.view;
         // Correct coordinates according to the current panoram
@@ -23,20 +23,10 @@ var Select = (function () {
         r[2] -=  p[0];
         r[1] -=  p[1];
         r[3] -=  p[1];
-        view.node.each(function (d) {
-            // Check if center of the node is in the selection rectange
-            if (point_in_rectangle(d.x, d.y, r)) {
-                view.select_node(d);
-            }
+        var nodes = view._graph.nodes.filter(function (d) {
+            return point_in_rectangle(d.x, d.y, r);
         });
-        view.edge.each(function (d) {
-            // Check if both start and and points of edge 
-            // are in the selection
-            if (point_in_rectangle(d.x1, d.y1, r) &&
-                    point_in_rectangle(d.x2, d.y2, r)) {
-                view.select_edge(d);
-            }
-        });
+        view.node.select(nodes);
     };
 
     return constructor;

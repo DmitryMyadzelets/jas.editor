@@ -1,3 +1,8 @@
+## Other web-based automata editors to try
+
+http://jointjs.com/demos/fsa
+
+
 ## Editor
 
 Create editor in the body of a HTML document:
@@ -80,23 +85,23 @@ For one element only:
 
 ### Presence of methods
 
-    graph        wrapper   undo
+    graph        wrapper   undo     view.
     node
-        add         +       +
-        remove      +       +
-        text        +       +
-        move        +       +
-        stress      +
-        shift       +
-        mark        +       +
-        unmark      +       +
-        initial     +       +
+        add         +       +       update
+        remove      +       +       update
+        text        +       +       node_text
+        move        +       +       update
+        stress      +               stress_node
+        shift       +               transform
+        mark        +       +       mark_node
+        unmark      +       +       mark_node
+        initial     +       +       initial
     edge
-        add         +       +
-        remove      +       +
-        text        +       +
-        move        +       +
-        stress      +
+        add         +       +       update
+        remove      +       +       update
+        text        +       +       edge_text
+        move        +       +       update
+        stress      +               stress_edge
         adjacent
         incoming
         outgoing
@@ -110,3 +115,45 @@ The `node` and `edge` properties of graph are created dynamically. Than, they do
 
     var edges = new Edges(); // nodes can be passed here though
     var nodes = new Nodes(edges);
+
+
+# View public members
+
+    selection_rectangle() -> prototype.selection_rectangle
+    select() -> prototype.select
+    spring()
+        .on()
+        .of()
+    node_handler()
+    edge_handler()
+    plane_handler()
+    transform()
+    node
+    edge
+    pan
+    svg
+    container
+    force
+## prototype methods
+    graph(graph)
+    size(width, height)
+    update()
+    node_text(d, text)
+    mark_node(d)
+    edge_text(d, text)
+    edge_by_data(d)
+    select_node(d, val)
+    select_edge(d, val)
+    selected_nodes()
+    selected_edges()
+    unselect_all()
+    initial(d)
+    transform_edge(d)
+    stress_node(d)
+    stress_edge(d)
+    //
+    selection_rectangle()
+    select()
+
+UML diagram
+http://yuml.me/edit/fb7e0266
