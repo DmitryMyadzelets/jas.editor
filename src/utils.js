@@ -58,3 +58,17 @@ function after(object, method, hook, that) {
     return after;
 }
 
+
+function before(object, method, hook, that) {
+    var old = object[method];
+    if (typeof old !== 'function' || typeof hook !== 'function') {
+        throw new Error('the parameters must be functions');
+    }
+    object[method] = function () {
+        that = that || this;
+        hook.apply(that, arguments);
+        var ret = old.apply(this, arguments);
+        return ret;
+    };
+    return before;
+}

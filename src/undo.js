@@ -173,10 +173,10 @@ Commands.prototype.create('initial', function (from, to) {
     this.undo = function () { graph.node.initial(from); };
 });
 
-Commands.prototype.create('move_edge', function (d, from, to) {
+Commands.prototype.create('edge_nodes', function (d, from, to) {
     var graph = this.graph;
-    this.redo = function () { graph.edge.move(d, to[0], to[1]); };
-    this.undo = function () { graph.edge.move(d, from[0], from[1]); };
+    this.redo = function () { graph.edge.nodes(d, to[0], to[1]); };
+    this.undo = function () { graph.edge.nodes(d, from[0], from[1]); };
 });
 
 Commands.prototype.create('spring', function (view) {
@@ -187,5 +187,4 @@ Commands.prototype.create('spring', function (view) {
     this.redo = function () { view.spring(true); };
     this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
 });
-
 

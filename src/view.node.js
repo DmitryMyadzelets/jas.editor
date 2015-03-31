@@ -3,73 +3,6 @@
 
 
 /**
- * Prototype object for the objects View.prototype.node and View.prototype.edge
- */
-View.prototype.element = (function () {
-    "use strict";
-
-    function methods() {
-
-        function remove(d) {
-            d.view().remove();
-        }
-
-        function stress(d) {
-            d.view().classed('stressed', true);
-        }
-
-        /**
-         * Calls function 'fun' for a single object or an array of objects
-         * @param  {Object|Array}
-         * @param  {Function} callback
-         * @param  {Object} [context] If provided, will be given instead of `this`
-         */
-        this.foreach = function (d, fun, that) {
-            that = that || this;
-            if (d instanceof Array) {
-                d.forEach(fun, that);
-            } else {
-                fun.call(that, d);
-            }
-        };
-
-        // Mouse input handler
-        this.handler = function () { return; };
-
-        this.remove = function (d) {
-            this.foreach(d, remove);
-        };
-
-        this.text = function (d) {
-            d.view().select('text').text(d.text || '');
-        };
-
-        this.stress = function (d) {
-            this.root.select('.stressed').classed('stressed', false);
-            this.foreach(d, stress, this);
-        };
-
-        /**
-         * Returns array of selected node's objects
-         * @return {Array} nodes
-         */
-        this.selected = function () {
-            var array = [];
-            this.root.selectAll('.selected').each(function (d) { array.push(d); });
-            return array;
-        };
-
-        return this;
-    }
-
-    var o = {};
-    methods.call(o);
-    return o;
-
-}());
-
-
-/**
  * Prototype object for view.node
  */
 View.prototype.node = (function () {
@@ -105,6 +38,10 @@ View.prototype.node = (function () {
             this.move(d);
             this.mark(d);
             this.initial(d);
+        }
+
+        function remove(d) {
+            d.view().remove();
         }
 
         function move(d) {
@@ -159,6 +96,10 @@ View.prototype.node = (function () {
             this.foreach(d, add);
         };
 
+        this.remove = function (d) {
+            this.foreach(d, remove);
+        };
+
         this.move = function (d) {
             this.foreach(d, move);
         };
@@ -169,13 +110,6 @@ View.prototype.node = (function () {
 
         this.initial = function (d) {
             this.foreach(d, initial);
-        };
-
-        this.select = function (d, val) {
-            val = val === undefined ? true : !!val;
-            this.foreach(d, function (d) {
-                d.view().classed('selected', val);
-            });
         };
     }
     methods.call(node);

@@ -140,7 +140,7 @@ var control_nodes_drag = (function () {
 var control_edge_drag = (function () {
     "use strict";
 
-    var mouse, d_source, node_d, edge_d, drag_target, from, exists;
+    var mouse, d_source, node_d, edge_d, drag_target, exists;
 
     var state, states = {
         init : function (view, source, d) {
@@ -153,8 +153,8 @@ var control_edge_drag = (function () {
                 // What to drag: head or tail of the edge? What is closer to the mouse pointer.
                 var head = [], tail = [];
                 mouse = view.pan.mouse();
-                vec.subtract(mouse, [d.x1, d.y1], tail);
-                vec.subtract(mouse, [d.x2, d.y2], head);
+                vec.subtract(mouse, [d.source.x, d.source.y], tail);
+                vec.subtract(mouse, [d.target.x, d.target.y], head);
                 drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
@@ -168,7 +168,7 @@ var control_edge_drag = (function () {
             case 'mouseout':
                 mouse = view.pan.mouse();
                 // Start dragging the edge
-                // Firstly, create new node with zero size
+                // First, create a new node with zero size
                 node_d = { x : mouse[0], y : mouse[1], r : 1 };
                 // Create new edge
                 edge_d = { source : d_source, target : node_d };
@@ -185,17 +185,13 @@ var control_edge_drag = (function () {
                 switch (d3.event.type) {
                 case 'mouseout':
                     mouse = view.pan.mouse();
-                    // Firstly, create new node with zero size
+                    // Firstly, create new node with (almost) zero size
                     node_d = { x : mouse[0], y : mouse[1], r : 1 };
                     edge_d = d;
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        d.target = node_d;
-                    } else {
-                        d.source = node_d;
-                    }
-                    // edge_d.text = d.text;
-                    commands.start().move_edge(edge_d, from, [edge_d.source, edge_d.target]);
+                    commands.start().edge_nodes(edge_d,
+                        [d.source, d.target],
+                        drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
+                        );
                     view.unselect_all();
                     view.edge.select(edge_d);
                     view.spring.off();
@@ -220,6 +216,7 @@ var control_edge_drag = (function () {
                 delete node_d.r; // in order to use default radius
                 commands.add_node(node_d);
                 view.unselect_all();
+                view.edge.move(edge_d); // to update wrt the node raduis
                 view.edge.select(edge_d);
                 view.node.select(drag_target ? edge_d.target : edge_d.source);
                 view.spring.on();
@@ -228,13 +225,10 @@ var control_edge_drag = (function () {
             case 'mouseover':
                 switch (source) {
                 case 'node':
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        edge_d.target = d;
-                    } else {
-                        edge_d.source = d;
-                    }
-                    commands.move_edge(edge_d, from, [edge_d.source, edge_d.target]);
+                    commands.edge_nodes(edge_d,
+                        [edge_d.source, edge_d.target],
+                        drag_target ? [edge_d.source, d] : [d, edge_d.target]
+                        );
                     view.spring.off();
                     state = states.drop_edge_or_exit;
                     break;
@@ -263,13 +257,10 @@ var control_edge_drag = (function () {
                     state = states.init;
                     break;
                 case 'mouseout':
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        edge_d.target = node_d;
-                    } else {
-                        edge_d.source = node_d;
-                    }
-                    commands.move_edge(edge_d, from, [edge_d.source, edge_d.target]);
+                    commands.edge_nodes(edge_d,
+                        [edge_d.source, edge_d.target],
+                        drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
+                        );
                     view.spring.off();
                     state = states.drag_edge;
                     break;
@@ -280,24 +271,25 @@ var control_edge_drag = (function () {
     };
     state = states.init;
 
-    // // Give names to the states-functions for debugging
-    // var key;
-    // for (key in states) {
-    //     if (states.hasOwnProperty(key)) {
-    //         if (!states[key]._name) {
-    //             states[key]._name = key;
-    //         }
-    //     }
-    // }
+    // Give names to the states-functions for debugging
+    var key;
+    for (key in states) {
+        if (states.hasOwnProperty(key)) {
+            if (!states[key]._name) {
+                states[key]._name = key;
+            }
+        }
+    }
 
-    // var ost = state;
+    var ost = state;
+    var i = 0;
     return function loop() {
         state.apply(this, arguments);
-        // // Debug transitions
-        // if (ost !== state) {
-        //     console.log(ost._name, state._name);
-        //     ost = state;
-        // }
+        // Debug transitions
+        if (ost !== state) {
+            console.log(i++, ost._name, '->', state._name);
+            ost = state;
+        }
         loop.done = state === states.init;
         return loop;
     };
@@ -318,7 +310,7 @@ var Controller = (function () {
     var state;          // Reference to a current state
     var old_state;      // Reference to a previous state
 
-    var pan, x, y;
+    var x, y;
 
 
     // Helper function for text editor control
@@ -388,18 +380,8 @@ var Controller = (function () {
                     }
                     state = states.wait_for_keyup;
                     break;
-                case 32:
-                    window.test_node = { x: 50, y: 50, initial: 1};
-                    view._node.add(window.test_node);
-                    break;
-                case 68:
-                    // view._node.remove([window.test_node]);
-                    delete window.test_node.initial;
-                    view._node.initial([window.test_node]);
-                    view._node.stress([window.test_node]);
-                    break;
-                default:
-                    console.log('Key', d3.event.keyCode);
+                // default:
+                //     console.log('Key', d3.event.keyCode);
                 }
             } else {
                 switch (source) {
@@ -455,9 +437,8 @@ var Controller = (function () {
                         }
                         break;
                     case 'dblclick':
-                        pan = view.pan();
-                        x = d.x + pan[0];
-                        y = d.y + pan[1];
+                        x = d3.event.layerX;
+                        y = d3.event.layerY;
                         control_text_edit(d3.select(this).select('text'), d.text, x, y, function (text) {
                             commands.start().node_text(d, text);
                         });
@@ -489,10 +470,8 @@ var Controller = (function () {
                         state = states.drag_edge;
                         break;
                     case 'dblclick':
-                        pan = view.pan();
-                        x = d.tx + pan[0];
-                        y = d.ty + pan[1];
-
+                        x = d3.event.layerX;
+                        y = d3.event.layerY;
                         control_text_edit(d3.select(this).select('text'), d.text, x, y, function (text) {
                             commands.start().edge_text(d, text);
                         });
@@ -590,6 +569,7 @@ var Controller = (function () {
 
         // Sets event handlers for the given View
         var that = this;
+
         // Handles nodes events
         this.view.node.handler = function () {
             context.call(that, 'node');
@@ -603,7 +583,7 @@ var Controller = (function () {
         };
 
         // Handles plane (out of other elements) events
-        this.view.plane_handler = function () {
+        this.view.handler = function () {
             context.call(that, 'plane');
             event.apply(this, arguments);
         };
@@ -611,4 +591,3 @@ var Controller = (function () {
 
     return constructor;
 }());
-

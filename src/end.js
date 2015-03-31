@@ -1,5 +1,5 @@
 // JSLint options:
-/*global View, Graph, Commands, wrap, after, Controller*/
+/*global View, Graph, Commands, wrap, after, before, Controller*/
 
     /**
      * Creates a new instance of Editor
@@ -38,6 +38,7 @@
         update.call(this);
 
         // Set callback which updates the view and commands when a user sets a new graph
+        before(this.graph, 'set_json', this.view.clear, this.view);
         after(this.graph, 'set_json', update.bind(this));
     };
 

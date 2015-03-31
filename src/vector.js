@@ -5,6 +5,8 @@
 //
 var vec = {
 
+    create : function () { return [0, 0]; },
+
     length : function (v) { return Math.sqrt(v[0] * v[0] + v[1] * v[1]); },
 
     normalize : function (v, out) {

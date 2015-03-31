@@ -45,6 +45,7 @@ var Graph = (function () {
          */
         this.shift = function (d, dxy) {
             foreach(d, shift, dxy);
+            this.edge.move(this.edge.adjacent(d));
         };
 
         /**
@@ -62,6 +63,7 @@ var Graph = (function () {
                     d.py = d.y;
                 });
             }
+            this.edge.move(this.edge.adjacent(d));
         };
 
         /**
@@ -145,16 +147,41 @@ var Graph = (function () {
         };
 
         /**
+         * Returns the edge if it exist for the given nodes, undefined otherwise
+         * @param  {Object} source node
+         * @param  {Object} target node
+         * @return {Object} edge
+         */
+        this.exists = function (source, target) {
+            var edge;
+            var i = this.data.length;
+            while (i--) {
+                edge = this.data[i];
+                if (edge.source === source && edge.target === target) {
+                    return edge;
+                }
+            }
+            return undefined;
+        };
+
+        /**
          * Changes edge's nodes to new given nodes
          * @param  {Object} edge
          * @param  {Object} source
          * @param  {Object} target
          */
-        this.move = function (d, source, target) {
+        this.nodes = function (d, source, target) {
             d.source = source;
             d.target = target;
         };
 
+        /**
+         * Moves the edge
+         * It is invoked when an edge's node is moved, though it may not affect the edge itslef
+         */
+        this.move = function () {
+            return;
+        };
     }
 
 
@@ -262,6 +289,9 @@ var Graph = (function () {
         this.node.data = [];
         this.edge.data = [];
 
+        // Let node methods access the edge methods
+        this.node.edge = this.edge;
+
         this.set_json(json_graph);
     };
 
@@ -288,24 +318,24 @@ var Graph = (function () {
         if (typeof json_graph === 'object') {
             // Copy nodes which are unique objects
             foreach(json_graph.nodes, function (node) {
-                if (typeof node === 'object' && this.indexOf(node) < 0) {
-                    this.push(node);
+                if (typeof node === 'object' && this.data.indexOf(node) < 0) {
+                    this.add(node);
                 }
-            }, this.node.data);
+            }, this.node);
 
             // Copy edges which have valid indexes to nodes, and replace indexes to nodes objects
             var self = this, i, j, num_nodes = this.node.data.length;
             foreach(json_graph.edges, function (edge) {
-                if (typeof edge === 'object' && this.indexOf(edge) < 0) {
+                if (typeof edge === 'object' && this.data.indexOf(edge) < 0) {
                     i = Number(edge.source);
                     j = Number(edge.target);
                     if (i >= 0 && i < num_nodes && j >= 0 && j < num_nodes) {
                         edge.source = self.node.data[i];
                         edge.target = self.node.data[j];
-                        this.push(edge);
+                        this.add(edge);
                     }
                 }
-            }, this.edge.data);
+            }, this.edge);
         }
     };
 
@@ -325,7 +355,7 @@ var Graph = (function () {
         });
         // Make deep clone, such that the objects of the copy will have no references to the source
         g = clone(g, true);
-        // Convert all the float values to integers
+        // Convert all float values to integers
         float2int(g);
         return g;
     };

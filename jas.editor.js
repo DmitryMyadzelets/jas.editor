@@ -85,11 +85,27 @@ function after(object, method, hook, that) {
 }
 
 
+function before(object, method, hook, that) {
+    var old = object[method];
+    if (typeof old !== 'function' || typeof hook !== 'function') {
+        throw new Error('the parameters must be functions');
+    }
+    object[method] = function () {
+        that = that || this;
+        hook.apply(that, arguments);
+        var ret = old.apply(this, arguments);
+        return ret;
+    };
+    return before;
+}
+
 
 //
 // 2D Vector Methods
 //
 var vec = {
+
+    create : function () { return [0, 0]; },
 
     length : function (v) { return Math.sqrt(v[0] * v[0] + v[1] * v[1]); },
 
@@ -172,258 +188,6 @@ d3.select(window)
     .on('keydown', router.handler)
     .on('keyup', router.handler);
 
-
-
-
-// JSLint options:
-/*global vec, View, d3 */
-/*jslint bitwise: true */
-
-var elements = {};
-
-var NODE_RADIUS = 16;
-var INITIAL_LENGTH = NODE_RADIUS * 1.6;
-//
-// Methods to calculate loop, stright and curved lines for links
-// 
-elements.make_edge = (function () {
-    "use strict";
-    var v = [0, 0]; // temporal vector
-    // var r = node_radius;
-    var norm = [0, 0];
-    var r = NODE_RADIUS;
-    // Constants for calculating a loop
-    var K = (function () {
-        var ANGLE_FROM = Math.PI / 3;
-        var ANGLE_TO = Math.PI / 12;
-        return {
-            DX1 : r * Math.cos(ANGLE_FROM),
-            DY1 : r * Math.sin(ANGLE_FROM),
-            DX2 : r * 4 * Math.cos(ANGLE_FROM),
-            DY2 : r * 4 * Math.sin(ANGLE_FROM),
-            DX3 : r * 4 * Math.cos(ANGLE_TO),
-            DY3 : r * 4 * Math.sin(ANGLE_TO),
-            DX4 : r * Math.cos(ANGLE_TO),
-            DY4 : r * Math.sin(ANGLE_TO),
-            NX : Math.cos(ANGLE_FROM - Math.PI / 24),
-            NY : Math.sin(ANGLE_FROM - Math.PI / 24)
-        };
-    }());
-
-
-    return {
-        r1 : 0, // radiuses
-        r2 : 0,
-        // Calculates vectors of edge from given vectors 'v1' to 'v2'
-        // Substracts radius of nodes 'r' from both vectors
-        stright : function (v1, v2) {
-            vec.subtract(v2, v1, v);    // v = v2 - v1
-            vec.normalize(v, norm);     // norm = normalized v
-            vec.scale(norm, this.r1, v);     // v = norm * r
-            vec.add(v1, v, v1);         // v1 = v1 + v
-            vec.scale(norm, this.r2, v);     // v = norm * r
-            vec.subtract(v2, v, v2);    // v2 = v2 - v
-            // Middle of the vector
-            // cv[0] = (v1[0] + v2[0])/2
-            // cv[1] = (v1[1] + v2[1])/2
-        },
-        // Calculates vectors of a dragged edge
-        // Substracts radius of nodes 'r' from the first vector
-        // Substracts radius of nodes 'r' from the last vector if to_node is true
-        drag : function (v1, v2, to_node) {
-            vec.subtract(v2, v1, v);    // v = v2 - v1
-            vec.normalize(v, norm);     // v = normalized v
-            vec.scale(norm, this.r2, v);     // v = v * r
-            vec.add(v1, v, v1);         // v1 = v1 + v
-            if (to_node) {
-                vec.subtract(v2, v, v2); // if subtract # v2 = v2 - v
-            }
-        },
-        // Calculates vectors of Bezier curve for curved edge
-        curve : function (v1, v2, cv) {
-            vec.subtract(v2, v1, v);
-            vec.normalize(v, norm);
-            cv[0] = (v1[0] + v2[0]) * 0.5 + norm[1] * this.r1 * 2;
-            cv[1] = (v1[1] + v2[1]) * 0.5 - norm[0] * this.r2 * 2;
-            vec.copy(cv, v);
-            this.stright(v1, v);
-            vec.copy(cv, v);
-            this.stright(v2, v);
-        },
-        loop : function (v1, v2, cv1, cv2) {
-            // Some Bazier calc (http://www.moshplant.com/direct-or/bezier/math.html)
-            vec.copy(v1, v);
-            // Coordinates of the Bazier curve (60 degrees angle)
-            v1[0] = v[0] + K.DX1;
-            v1[1] = v[1] - K.DY1;
-            //
-            cv1[0] = v[0] + K.DX2;
-            cv1[1] = v[1] - K.DY2;
-            //
-            cv2[0] = v[0] + K.DX3; // 15 degrees
-            cv2[1] = v[1] - K.DY3;
-            //
-            v2[0] = v[0] + K.DX4;
-            v2[1] = v[1] - K.DY4;
-        }
-    };
-
-}());
-
-
-
-// Returns SVG string for a graph edge
-elements.get_edge_transformation = (function () {
-    "use strict";
-    var v1 = [0, 0];
-    var v2 = [0, 0];
-    var cv = [0, 0];
-    var cv2 = [0, 0];
-    return function (d) {
-        v1[0] = d.source.x;
-        v1[1] = d.source.y;
-        v2[0] = d.target.x;
-        v2[1] = d.target.y;
-        elements.make_edge.r1 = d.source.r !== undefined ? d.source.r : 16;
-        elements.make_edge.r2 = d.target.r !== undefined ? d.target.r : 16;
-        // text coordinates (between the edge's nodes, by default)
-        d.tx = (d.source.x + d.target.x) >>> 1;
-        d.ty = (d.source.y + d.target.y) >>> 1;
-        switch (d.type) {
-        case 1:
-            elements.make_edge.curve(v1, v2, cv);
-            // d.tx = cv[0];
-            // d.ty = cv[1];
-            d.tx = (cv[0] + v2[0]) >>> 1;
-            d.ty = (cv[1] + v2[1]) >>> 1;
-            break;
-        case 2:
-            elements.make_edge.loop(v1, v2, cv, cv2);
-            d.tx = (cv[0] + cv2[0]) >>> 1;
-            d.ty = (cv[1] + cv2[1]) >>> 1;
-            break;
-        default:
-            elements.make_edge.stright(v1, v2);
-        }
-        // Keep link points for further use (i.e. link selection)
-        d.x1 = v1[0];
-        d.y1 = v1[1];
-        d.x2 = v2[0];
-        d.y2 = v2[1];
-        switch (d.type) {
-        case 1:
-            return 'M' + v1[0] + ',' + v1[1] + 'Q' + cv[0] + ',' + cv[1] + ',' + v2[0] + ',' + v2[1];
-        case 2:
-            return 'M' + v1[0] + ',' + v1[1] + 'C' + cv[0] + ',' + cv[1] + ',' + cv2[0] + ',' + cv2[1] + ',' + v2[0] + ',' + v2[1];
-        default:
-            return 'M' + v1[0] + ',' + v1[1] + 'L' + v2[0] + ',' + v2[1];
-        }
-    };
-}());
-
-
-var b = true;
-
-elements.get_node_transformation = function (d) {
-    if (!d || d.x === undefined || d.y === undefined) { return ''; }
-    return "translate(" + d.x + "," + d.y + ")";
-};
-
-
-
-function node_radius(d) {
-    if (d && d.r) {
-        return d.r;
-    }
-    return NODE_RADIUS;
-}
-
-function node_marked_radius(d) {
-    if (d && d.r) {
-        return d.r;
-    }
-    return NODE_RADIUS - 3;
-}
-
-elements.mark_node = function (selection) {
-    // Mark what is not marked already
-    // Note that we don't mark nodes which are marked already
-    selection
-        .filter(function (d) { return !!d.marked && d3.select(this).select('circle.marked').empty(); })
-        .append('circle')
-        .attr('r', node_marked_radius)
-        .classed('marked', true);
-    // Unmark    
-    selection.filter(function (d) { return !d.marked; })
-        .selectAll('circle.marked')
-        .remove();
-};
-
-
-// Adds\removes elements which make a node look as the inital state
-elements.initial = function (selection, show) {
-    if (arguments.length < 2 || !!show) {
-        selection.append('path')
-            .attr('class', 'edge')
-            .attr('marker-end', 'url(#marker-arrow)')
-            .attr('d', function () { return 'M' + (-NODE_RADIUS - INITIAL_LENGTH) + ',0L' + (-NODE_RADIUS) + ',0'; });
-        // selection.classed('initial', false);
-    } else {
-        selection.select('path.edge').remove();
-    }
-};
-
-
-// Adds SVG elements representing graph nodes
-elements.add_node = function (selection, handler) {
-    var g = selection.append('g')
-        .attr('transform', elements.get_node_transformation)
-        .on('mousedown', handler)
-        .on('mouseup', handler)
-        .on('mouseover', handler)
-        .on('mouseout', handler)
-        .on('dblclick', handler);
-
-    g.append('circle')
-        .attr('r', node_radius);
-
-    g.call(elements.mark_node);
-
-    g.append('text')
-        // .style('text-anchor', 'middle')
-        .attr('alignment-baseline', 'center')
-        .text(function (d) { return d.text || ''; });
-
-    elements.initial(g.filter(function (d) { return !!d.initial; }));
-};
-
-
-
-// Adds SVG elements representing graph links/edges
-// Returns root of the added elements
-elements.add_edge = function (selection, handler) {
-    var g = selection.append('g')
-        .on('mousedown', handler)
-        .on('mouseup', handler)
-        .on('mouseover', handler)
-        .on('mouseout', handler)
-        .on('dblclick', handler);
-        // .on('mousemove', handler);
-
-    g.append('path')
-        .attr('class', 'edge') // CSS class style
-        .attr('marker-end', 'url(#marker-arrow)');
-
-    g.append('path')
-        .attr('class', 'catch');
-
-    g.append('text')
-        // .style('text-anchor', 'middle')
-        .attr('alignment-baseline', 'center')
-        .text(function (d) { return d.text || ''; });
-
-    return g;
-};
 
 
 // JSLint options:
@@ -572,6 +336,199 @@ function pan(container) {
 }
 
 
+
+// JSLint options:
+/*global d3, ed, elements, pan, Select, after, router*/
+
+// Structure of SVG tree:
+// <svg>
+//   <g>
+//     <g .nodes>
+//       <g>
+//         <circle>
+//         <circle .marked>
+//         <text>
+//         <path .edge> // for initial node\state
+//     <g .edges>
+//       <g>
+//         <path .edge>
+//         <path .catch>
+
+
+// Returns new empty graphoo
+function get_empty_graph() {
+    return {
+        nodes: [],
+        edges: []
+    };
+}
+
+
+
+// Returns true if link 'a' is counter to link 'b'
+function has_counter_edge(d) {
+    return (this.target === d.source) && (this.source === d.target);
+}
+
+
+
+// Set type of the link (0-stright, 1-curved, 2-loop)
+function set_edge_type(d) {
+    if (d.source === d.target) {
+        d.type = 2;
+    } else if (this._graph.edges.filter(has_counter_edge, d).length > 0) {
+        d.type = 1;
+    } else {
+        d.type = 0;
+    }
+}
+
+
+
+function View(aContainer, aGraph) {
+    "use strict";
+    var self = this;
+
+    // Create SVG elements
+    var container = d3.select(aContainer || 'body');
+
+    // Default dimension of SVG element
+    var width = 500;
+    var height = 300;
+
+    var svg = container.append('svg')
+        // .attr('xmlns', 'http://www.w3.org/2000/svg')
+        // .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+        .attr('width', width)
+        .attr('height', height)
+        .classed('unselectable', true)
+        // Disable browser popup menu
+        .on('contextmenu', function () { d3.event.preventDefault(); });
+
+    // Returns View.prototype.selection_rectangle object with context of 
+    // current SVG object
+    this.selection_rectangle = function () {
+        return View.prototype.selection_rectangle.context(svg);
+    };
+
+    this.select = new Select(this);
+
+
+    this.handler = function () { return; };
+
+    // Makes current view focused and requests routing of window events (keys) to it
+    function focus() {
+        router.handle(this.handler);
+    }
+
+    svg.on('mousedown', this.handler)
+        .on('mouseover', focus)
+        .on('mouseup', this.handler)
+        .on('mousemove', this.handler)
+        // .on('mouseout', this.handler)
+        .on('dblclick', this.handler)
+        .on('dragstart', function () { d3.event.preventDefault(); });
+
+    // Arrow marker
+    var defs = svg.append('svg:defs');
+
+    defs.append('svg:marker')
+            .attr('id', 'marker-arrow')
+            .attr('orient', 'auto')
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('refX', 6)
+            .attr('refY', 3)
+        .append('svg:path')
+            .attr('d', 'M0,0 L6,3 L0,6');
+
+    var root_group = svg.append('g');
+
+    this.transform = function () {
+        self.edge.move(this._graph.edges);
+    };
+
+    var force = d3.layout.force()
+        .charge(-800)
+        .linkDistance(150)
+        .chargeDistance(450)
+        .size([width, height])
+        .on('tick', this.transform);
+
+    this.spring = (function () {
+        var started = false;
+        var fn = function (start) {
+            if (arguments.length) {
+                if (start) {
+                    if (started) {
+                        force.resume();
+                    } else {
+                        force.start();
+                        started = true;
+                    }
+                } else {
+                    force.stop();
+                    started = false;
+                }
+            }
+            return started;
+        };
+        fn.on = function () { if (started) { force.resume(); } };
+        fn.off = function () { if (started) { force.stop(); } };
+        return fn;
+    }());
+
+
+    this.node = View.prototype.node.create(root_group);
+    this.edge = View.prototype.edge.create(root_group);
+
+    this.container = container;
+    this.pan = pan(root_group);
+    this.svg = svg;
+    this.force = force;
+
+    // Attach graph
+    this.graph(aGraph);
+}
+
+
+
+function view_methods() {
+
+    // Returns a graph attached to the view.
+    // If new graph is given, attches it to the view.
+    this.graph = function (graph) {
+        if (arguments.length > 0) {
+            // 
+            this._graph = null;
+            this._graph = graph || get_empty_graph();
+        }
+        return this._graph;
+    };
+
+    this.clear = function () {
+        // Remove old graph elements
+        this.edge.clear();
+        this.node.clear();
+    };
+
+    this.size = function (width, height) {
+        if (arguments.length) {
+            this.svg.attr('width', width).attr('height', height);
+            this.force.size([width, height]);
+        }
+    };
+
+    // Unselect all graph elements
+    this.unselect_all = function () {
+        this.svg.selectAll('.selected').classed('selected', false);
+    };
+}
+
+
+view_methods.call(View.prototype);
+
+
 // JSLint options:
 /*global View*/
 
@@ -584,12 +541,8 @@ View.prototype.element = (function () {
 
     function methods() {
 
-        function remove(d) {
-            d.view().remove();
-        }
-
         function stress(d) {
-            d.view().select('circle').classed('stressed', true);
+            d.view().classed('stressed', true);
         }
 
         /**
@@ -610,8 +563,11 @@ View.prototype.element = (function () {
         // Mouse input handler
         this.handler = function () { return; };
 
-        this.remove = function (d) {
-            this.foreach(d, remove);
+        /**
+         * Removes all <g> elements from the root
+         */
+        this.clear = function () {
+            this.root.selectAll('g').remove();
         };
 
         this.text = function (d) {
@@ -621,6 +577,13 @@ View.prototype.element = (function () {
         this.stress = function (d) {
             this.root.select('.stressed').classed('stressed', false);
             this.foreach(d, stress, this);
+        };
+
+        this.select = function (d, val) {
+            val = val === undefined ? true : !!val;
+            this.foreach(d, function (d) {
+                d.view().classed('selected', val);
+            });
         };
 
         /**
@@ -641,9 +604,13 @@ View.prototype.element = (function () {
     return o;
 
 }());
+// JSLint options:
+/*global View*/
 
 
-
+/**
+ * Prototype object for view.node
+ */
 View.prototype.node = (function () {
     "use strict";
 
@@ -659,7 +626,8 @@ View.prototype.node = (function () {
         this.INITIAL_LENGTH = this.RADIUS * 1.6;
 
         function add(d) {
-            var g = this.root.append('g').datum(d)
+            var g = this.root.append('g')
+                .datum(d)
                 .on('mousedown', this.handler)
                 .on('mouseup', this.handler)
                 .on('mouseover', this.handler)
@@ -676,6 +644,10 @@ View.prototype.node = (function () {
             this.move(d);
             this.mark(d);
             this.initial(d);
+        }
+
+        function remove(d) {
+            d.view().remove();
         }
 
         function move(d) {
@@ -730,6 +702,10 @@ View.prototype.node = (function () {
             this.foreach(d, add);
         };
 
+        this.remove = function (d) {
+            this.foreach(d, remove);
+        };
+
         this.move = function (d) {
             this.foreach(d, move);
         };
@@ -741,449 +717,314 @@ View.prototype.node = (function () {
         this.initial = function (d) {
             this.foreach(d, initial);
         };
-
-        this.select = function (d, val) {
-            val = val === undefined ? true : !!val;
-            this.foreach(d, function (d) {
-                d.view().select('circle').classed('selected', val);
-            });
-        };
-
     }
     methods.call(node);
 
     return node;
 }());
-
 // JSLint options:
-/*global d3, ed, elements, pan, Select*/
-
-// Structure of SVG tree:
-// <svg>
-//   <g>
-//     <g .nodes>
-//       <g>
-//         <circle>
-//         <circle .marked>
-//         <text>
-//         <path .edge> // for initial node\state
-//     <g .edges>
-//       <g>
-//         <path .edge>
-//         <path .catch>
+/*global View*/
+/*jslint bitwise: true */
 
 
-// Returns new empty graphoo
-function get_empty_graph() {
-    return {
-        nodes: [],
-        edges: []
-    };
-}
-
-
-
-// Returns true if link 'a' is counter to link 'b'
-function has_counter_edge(d) {
-    return (this.target === d.source) && (this.source === d.target);
-}
-
-
-
-// Set type of the link (0-stright, 1-curved, 2-loop)
-function set_edge_type(d) {
-    if (d.source === d.target) {
-        d.type = 2;
-    } else if (this._graph.edges.filter(has_counter_edge, d).length > 0) {
-        d.type = 1;
-    } else {
-        d.type = 0;
-    }
-}
-
-
-
-// Returns text for SVG styling
-function embedded_style() {
-    // Embedded SVG styling
-    var style = [
-        'g.nodes circle {',
-        'fill: dodgerblue;',
-        'stroke: #555;',
-        'stroke-width: 0.09em;',
-        'fill-opacity: 0.5;',
-        '}',
-
-        'path.edge {',
-        'fill: none;',
-        'stroke: #333;',
-        'stroke-width: 0.09em;',
-        '}',
-
-        'path.catch {',
-        'fill: none;',
-        '}',
-
-        ' .nodes text, .edges text {',
-        'font-size: small;',
-        'font-family: Verdana, sans-serif;',
-        'pointer-events: none;',
-        'text-anchor: middle;',
-        'dominant-baseline: central;',
-        '}'
-    ].join('');
-
-    return style;
-}
-
-
-
-function View(aContainer, aGraph) {
+/**
+ * Prototype object for view.edge
+ */
+View.prototype.edge = (function () {
     "use strict";
-    var self = this;
 
-    // Create SVG elements
-    var container = d3.select(aContainer || 'body');
+    var edge = Object.create(View.prototype.element);
 
-    // Default dimension of SVG element
-    var width = 500;
-    var height = 300;
+    function methods() {
+        /**
+         * Default geometrical values
+         * @type {Number}
+         */
 
-    var svg = container.append('svg')
-        // .attr('xmlns', 'http://www.w3.org/2000/svg')
-        // .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-        .attr('width', width)
-        .attr('height', height)
-        .classed('unselectable', true)
-        // Disable browser popup menu
-        .on('contextmenu', function () { d3.event.preventDefault(); });
+        /**
+        * Calculates path for a straight edge
+        * @param  {Object} d edge
+        */
+        var stright = (function () {
+            var x1, y1, x2, y2, x, y, tx, ty, l;
+            var path;
+            var R = View.prototype.node.RADIUS;
+            // vec.subtract(v2, v1, v);    // v = v2 - v1
+            // vec.normalize(v, norm);     // norm = normalized v
+            // vec.scale(norm, this.r1, v);     // v = norm * r
+            // vec.add(v1, v, v1);         // v1 = v1 + v
+            // vec.scale(norm, this.r2, v);     // v = norm * r
+            // vec.subtract(v2, v, v2);    // v2 = v2 - v
 
-    // Returns View.prototype.selection_rectangle object with context of 
-    // current SVG object
-    this.selection_rectangle = function () {
-        return View.prototype.selection_rectangle.context(svg);
-    };
+            return function (d) {
+                // Coordinates of the source and target nodes
+                x1 = d.source.x;
+                y1 = d.source.y;
+                x2 = d.target.x;
+                y2 = d.target.y;
+                // Calculate new vectors subtracting radius of the nodes
+                // v = v2 - v1
+                x = x2 - x1;
+                y = y2 - y1;
+                // normalized v
+                l = 1 / Math.sqrt(x * x + y * y);
+                x *= l;
+                y *= l;
+                // v1 = v1 + v
+                // Try to use a particular node's radius instead the common one
+                x1 += x * (d.source.r || R);
+                y1 += y * (d.source.r || R);
+                // v2 = v2 - 2
+                x2 -= x * (d.target.r || R);
+                y2 -= y * (d.target.r || R);
 
-    // // Returns View.prototype.select object with context of current object
-    // this.select = function () {
-    //     return View.prototype.select.context(self, root_group);
-    // };
-    this.select = new Select(this);
+                // text coordinates
+                tx = (x1 + x2) >>> 1;
+                ty = (y1 + y2) >>> 1;
 
-    // Handles edge events
-    this.edge_handler = undefined;
-    // Handles plane (out of other elements) events
-    function plane_handler() {
-        if (typeof self.plane_handler === 'function') {
-            self.plane_handler.apply(this, arguments);
+                x1 |= 0;
+                y1 |= 0;
+                x2 |= 0;
+                y2 |= 0;
+                tx |= 0;
+                ty |= 0;
+
+                path = 'M' + x1 + ',' + y1 + 'L' + x2 + ',' + y2;
+
+                d.view().selectAll('path').attr('d', path);
+                d.view().select('text').attr('x', tx).attr('y', ty);
+            };
+        }());
+
+        /**
+        * Calculates path for a bended edge 
+        * @param  {Object} d edge
+        */
+        var bended = (function () {
+            var x1, y1, x2, y2, x, y, cx, cy, tx, ty, l;
+            var path;
+            var R = View.prototype.node.RADIUS;
+            return function (d) {
+                // Coordinates of the source and target nodes
+                x1 = d.source.x;
+                y1 = d.source.y;
+                x2 = d.target.x;
+                y2 = d.target.y;
+                // vectors for the Bezier curve
+                // v = v2 - v1
+                x = x2 - x1;
+                y = y2 - y1;
+                // normalized v
+                l = 1 / Math.sqrt(x * x + y * y);
+                x *= l;
+                y *= l;
+                // control vector (empirically)
+                cx = (x1 + x2) * 0.5 + y * R * 2;
+                cy = (y1 + y2) * 0.5 - x * R * 2;
+                // v = v1 + cv
+                x = cx - x1;
+                y = cy - y1;
+                // normalized v
+                l = 1 / Math.sqrt(x * x + y * y);
+                x *= l;
+                y *= l;
+                // radius vector
+                x *= R;
+                y *= R;
+                // v1 = v1 + v
+                x1 += x;
+                y1 += y;
+                // v = v2 - cv
+                x = x2 - cx;
+                y = y2 - cy;
+                // normalized v
+                l = 1 / Math.sqrt(x * x + y * y);
+                x *= l;
+                y *= l;
+                // radius vector
+                x *= R;
+                y *= R;
+                // v2 = v2 - 2
+                x2 -= x;
+                y2 -= y;
+
+                // text coordinates
+                tx = (cx + x2) >>> 1;
+                ty = (cy + y2) >>> 1;
+
+                x1 |= 0;
+                y1 |= 0;
+                x2 |= 0;
+                y2 |= 0;
+                cx |= 0;
+                cy |= 0;
+                tx |= 0;
+                ty |= 0;
+
+                path = 'M' + x1 + ',' + y1 + 'Q' + cx + ',' + cy + ',' + x2 + ',' + y2;
+
+                d.view().selectAll('path').attr('d', path);
+                d.view().select('text').attr('x', tx).attr('y', ty);
+            };
+        }());
+
+        /**
+        * Calculates path for a loop edge
+        * @param  {Object} d edge
+        */
+        var loop = (function () {
+            // Constants for loop calculation
+            var R = View.prototype.node.RADIUS;
+            var K = (function () {
+                var ANGLE_FROM = Math.PI / 3;
+                var ANGLE_TO = Math.PI / 12;
+                return {
+                    DX1 : R * Math.cos(ANGLE_FROM),
+                    DY1 : R * Math.sin(ANGLE_FROM),
+                    DX2 : R * 4 * Math.cos(ANGLE_FROM),
+                    DY2 : R * 4 * Math.sin(ANGLE_FROM),
+                    DX3 : R * 4 * Math.cos(ANGLE_TO),
+                    DY3 : R * 4 * Math.sin(ANGLE_TO),
+                    DX4 : R * Math.cos(ANGLE_TO),
+                    DY4 : R * Math.sin(ANGLE_TO),
+                    NX : Math.cos(ANGLE_FROM - Math.PI / 24),
+                    NY : Math.sin(ANGLE_FROM - Math.PI / 24)
+                };
+            }());
+
+            var x1, y1, x2, y2, x, y, cx1, cy1, cx2, cy2, tx, ty;
+            var path;
+
+            return function (d) {
+                // Coordinates of the source and target nodes
+                x1 = d.source.x;
+                y1 = d.source.y;
+                x2 = d.target.x;
+                y2 = d.target.y;
+                // Some Bazier calc (http://www.moshplant.com/direct-or/bezier/math.html)
+                x = x1;
+                y = y1;
+                // Coordinates of the Bazier curve (60 degrees angle)
+                x1 = x + K.DX1;
+                y1 = y - K.DY1;
+                // Control vectors
+                cx1 = x + K.DX2;
+                cy1 = y - K.DY2;
+                //
+                cx2 = x + K.DX3; // 15 degrees
+                cy2 = y - K.DY3;
+                //
+                x2 = x + K.DX4;
+                y2 = y - K.DY4;
+
+                // text coordinates (between the edge's nodes, by default)
+                tx = (cx1 + cx2) >>> 1;
+                ty = (cy1 + cy2) >>> 1;
+
+                x1 |= 0;
+                y1 |= 0;
+                x2 |= 0;
+                y2 |= 0;
+                cx1 |= 0;
+                cy1 |= 0;
+                cx2 |= 0;
+                cy2 |= 0;
+                tx |= 0;
+                ty |= 0;
+
+                path = 'M' + x1 + ',' + y1 + 'C' + cx1 + ',' + cy1 + ',' + cx2 + ',' + cy2 + ',' + x2 + ',' + y2;
+
+                d.view().selectAll('path').attr('d', path);
+                d.view().select('text').attr('x', tx).attr('y', ty);
+            };
+        }());
+
+        function add(d) {
+            var g = this.root.append('g')
+                .datum(d)
+                .on('mousedown', this.handler)
+                .on('mouseup', this.handler)
+                .on('mouseover', this.handler)
+                .on('mouseout', this.handler)
+                .on('dblclick', this.handler);
+                // .on('mousemove', this.handler);
+
+            d.view = function () { return g; };
+
+            g.append('path')
+                .attr('class', 'edge')
+                .attr('marker-end', 'url(#marker-arrow)');
+
+            g.append('path')
+                .attr('class', 'catch');
+
+            g.append('text').attr('alignment-baseline', 'center');
+            this.text(d);
         }
-    }
 
-    // Makes current view focused and requests routing of window events (keys) to it
-    function focus() {
-        router.handle(plane_handler);
-    }
+        function remove(d) {
+            d.view().remove();
+        }
 
-    svg.on('mousedown', plane_handler)
-        .on('mouseover', focus)
-        .on('mouseup', plane_handler)
-        .on('mousemove', plane_handler)
-        // .on('mouseout', plane_handler)
-        .on('dblclick', plane_handler)
-        .on('dragstart', function () { d3.event.preventDefault(); });
+        function move(d) {
+            d.path.call(this, d);
+        }
 
-    // Arrow marker
-    var defs = svg.append('svg:defs');
-
-    defs.append('svg:marker')
-            .attr('id', 'marker-arrow')
-            .attr('orient', 'auto')
-            .attr('markerWidth', 6)
-            .attr('markerHeight', 6)
-            .attr('refX', 6)
-            .attr('refY', 3)
-        .append('svg:path')
-            .attr('d', 'M0,0 L6,3 L0,6');
-
-
-    defs.append('style').html(embedded_style());
-
-    var root_group = svg.append('g');
-
-    this.transform = function () {
-        // self.node.attr('transform', elements.get_node_transformation);
-        self.edge.each(self.transform_edge);
-    };
-
-    var force = d3.layout.force()
-        .charge(-800)
-        .linkDistance(150)
-        .chargeDistance(450)
-        .size([width, height])
-        .on('tick', this.transform);
-
-    this.spring = (function () {
-        var started = false;
-        var fn = function (start) {
-            if (arguments.length) {
-                if (start) {
-                    if (started) {
-                        force.resume();
-                    } else {
-                        force.start();
-                        started = true;
-                    }
-                } else {
-                    force.stop();
-                    started = false;
-                }
-            }
-            return started;
+        /**
+         * Factory constructor
+         * @param  {Object} root d3 selection
+         * @return {Object} node namespace object to work with nodes
+         */
+        this.create = function (root) {
+            var o = Object.create(edge);
+            o.root = root.append('g').attr('class', 'edges');
+            return o;
         };
-        fn.on = function () { if (started) { force.resume(); } };
-        fn.off = function () { if (started) { force.stop(); } };
-        return fn;
-    }());
 
-
-    this.node = View.prototype.node.create(root_group);
-
-    // this.node = root_group.append('g').attr('class', 'nodes').selectAll('g');
-    this.edge = root_group.append('g').attr('class', 'edges').selectAll('g');
-
-    this.pan = pan(root_group);
-
-    this.svg = svg;
-    this.container = container;
-
-    this.force = force;
-
-    // Attach graph
-    this.graph(aGraph);
-}
-
-
-
-function view_methods() {
-
-    // Helpers
-    // Calls function 'fun' for a single datum or an array of data
-    function foreach(d, fun) {
-        if (d instanceof Array) {
-            d.forEach(fun);
-        } else {
-            fun(d);
-        }
-    }
-
-    // Returns an unique identifier
-    var uid = (function () {
-        var id = 0;
-        return function () {
-            return id++;
+        this.add = function (d) {
+            this.foreach(d, add);
         };
-    }());
 
+        this.remove = function (d) {
+            this.foreach(d, remove);
+        };
 
-    // Returns key of the datum
-    function key(d) {
-        if (d.uid === undefined) { d.uid = uid(); }
-        return d.uid;
+        this.move = function (d) {
+            this.foreach(d, move);
+        };
+
+        /**
+         * Sets the edge view as stright
+         * @param  {Object} d edge
+         */
+        this.stright = function (d) {
+            d.path = stright;
+            this.move(d);
+        };
+
+        /**
+         * Sets the edge view as bended
+         * @param  {Object} d edge
+         */
+        this.bended = function (d) {
+            d.path = bended;
+            this.move(d);
+        };
+
+        /**
+         * Sets the edge view as loop
+         * @param  {Object} d edge
+         */
+        this.loop = function (d) {
+            d.path = loop;
+            this.move(d);
+        };
+
     }
+    methods.call(edge);
 
-    // Returns subselection filtered w.r.t 'd' or [d, ..., d]
-    function filter(selection, d) {
-        if (d instanceof Array) {
-            return selection.filter(function (v) { return d.indexOf(v) >= 0; });
-        }
-        return selection.filter(function (v) { return v === d; });
-    }
-
-
-    // function update_nodes() {
-    //     this.node = this.node.data(this.graph().nodes, key);
-    //     this.node.enter().call(elements.add_node, this.node_handler);
-    //     this.node.exit().remove();
-    // }
-
-
-    function update_edges() {
-        this.edge = this.edge.data(this.graph().edges, key);
-        this.edge.enter().call(elements.add_edge, this.edge_handler);
-        this.edge.exit().remove();
-    }
-
-
-    // Return whether graph nodes have coordnates
-    // function has_no_coordinates(nodes) {
-    //     var ret = false;
-    //     nodes.forEach(function (v, index) {
-    //         if (v.x === undefined) { v.x = index; ret = true; }
-    //         if (v.y === undefined) { v.y = index; ret = true; }
-    //     });
-    //     return ret;
-    // }
-
-    // Returns whether at least one edge reffers to the nodes by indexe rather then objects
-    // function has_indexes(edges) {
-    //     var ret = false;
-    //     edges.forEach(function (v) { if (typeof v.source === 'number' || typeof v.target === 'number') { ret = true; } });
-    //     return ret;
-    // }
-
-
-    // Removes key for each element of the array
-    function delete_keys(array, key) {
-        array.forEach(function (o) { delete o[key]; });
-    }
-
-    // Returns a graph attached to the view.
-    // If new graph is given, attches it to the view.
-    this.graph = function (graph) {
-        if (arguments.length > 0) {
-            this._graph = null;
-            this._graph = graph || get_empty_graph();
-            // Delete old 'uid' keys
-            delete_keys(this._graph.nodes, 'uid');
-            delete_keys(this._graph.edges, 'uid');
-
-            // if (has_no_coordinates(this._graph.nodes)) { this.spring(true); }
-            this.node.add(this._graph.nodes);
-            this.update();
-        }
-        return this._graph;
-    };
-
-
-    this.size = function (width, height) {
-        if (arguments.length) {
-            this.svg.attr('width', width).attr('height', height);
-            this.force.size([width, height]);
-        }
-    };
-
-
-    // Updates SVG structure according to the graph structure
-    this.update = function () {
-        var is_spring = this.spring();
-        if (is_spring) { this.spring(false); }
-        // update_nodes.call(this);
-        update_edges.call(this);
-        // this.force.nodes(this._graph.nodes).links(this._graph.edges);
-        if (is_spring) { this.spring(true); }
-
-        var self = this;
-        // Identify type of edge {int} (0-straight, 1-curved, 2-loop)
-        this.edge.each(function () {
-            set_edge_type.apply(self, arguments);
-        });
-
-        this.transform();
-    };
-
-
-
-    // this.node_text = function (d, text) {
-    //     filter(this.node, d).select('text').text(text);
-    // };
-
-    // this.mark_node = function (d) {
-    //     var nodes = filter(this.node, d);
-    //     nodes.call(elements.mark_node);
-    // };
-
-
-    this.edge_text = function (d, text) {
-        filter(this.edge, d).select('text').text(text);
-    };
-
-
-    this.edge_by_data = function (d) {
-        return filter(this.edge, d);
-    };
-
-    // Methods for visual selection
-
-    // Adds/removes a CSS class for node[s] to show them selected
-    // this.select_node = function (d, val) {
-    //     var self = this;
-    //     val = val === undefined ? true : !!val;
-    //     foreach(d, function (v) {
-    //         filter(self.node, v).select('circle').classed('selected', val);
-    //     });
-    // };
-
-
-    // Adds/removes a CSS class for edge[s] to show them selected
-    this.select_edge = function (d, val) {
-        var self = this;
-        val = val === undefined ? true : !!val;
-        foreach(d, function (v) {
-            filter(self.edge, v).select('path.edge').classed('selected', val);
-        });
-    };
-
-
-    // this.selected_nodes = function () {
-    //     var ret = [];
-    //     var nodes = this.node.select('.selected');
-    //     nodes.each(function (d) { ret.push(d); });
-    //     return ret;
-    // };
-
-
-    this.selected_edges = function () {
-        var ret = [];
-        var edges = this.edge.select('.selected');
-        edges.each(function (d) { ret.push(d); });
-        return ret;
-    };
-
-
-    // Removes a selection CSS class for all the nodes and edges
-    this.unselect_all = function () {
-        this.svg.selectAll('.selected').classed('selected', false);
-    };
-
-
-    // this.initial = function (d) {
-    //     // Remove all initial states
-    //     this.node.selectAll('path.edge').remove();
-    //     // Add initial states
-    //     elements.initial(filter(this.node, d));
-    // };
-
-
-    this.transform_edge = function (d) {
-        var str = elements.get_edge_transformation(d);
-        var e = d3.select(this);
-        e.selectAll('path').attr('d', str);
-        e.select('text')
-            .attr('x', d.tx)
-            .attr('y', d.ty);
-    };
-
-    // this.stress_node = function (d) {
-    //     var node = this.node;
-    //     node.select('.stressed').classed('stressed', false);
-    //     foreach(d, function (v) {
-    //         filter(node, v).select('circle').classed('stressed', true);
-    //     });
-    // };
-
-    this.stress_edge = function (d) {
-        var edge = this.edge;
-        edge.select('.stressed').classed('stressed', false);
-        foreach(d, function (v) {
-            filter(edge, v).select('path.edge').classed('stressed', true);
-        });
-    };
-}
-
-
-view_methods.call(View.prototype);
-
-
+    return edge;
+}());
 
 /**
  * Creates an instance of Select class
@@ -1200,7 +1041,7 @@ var Select = (function () {
         this.view = aView;
     };
 
-    // Updates graphical appearance of selected_nodes nodes
+    // Updates graphical appearance of selected nodes
     constructor.prototype.by_rectangle = function (r) {
         var view = this.view;
         // Correct coordinates according to the current panoram
@@ -1213,15 +1054,6 @@ var Select = (function () {
             return point_in_rectangle(d.x, d.y, r);
         });
         view.node.select(nodes);
-
-        view.edge.each(function (d) {
-            // Check if both start and and points of edge 
-            // are in the selection
-            if (point_in_rectangle(d.x1, d.y1, r) &&
-                    point_in_rectangle(d.x2, d.y2, r)) {
-                view.select_edge(d);
-            }
-        });
     };
 
     return constructor;
@@ -1462,10 +1294,10 @@ Commands.prototype.create('initial', function (from, to) {
     this.undo = function () { graph.node.initial(from); };
 });
 
-Commands.prototype.create('move_edge', function (d, from, to) {
+Commands.prototype.create('edge_nodes', function (d, from, to) {
     var graph = this.graph;
-    this.redo = function () { graph.edge.move(d, to[0], to[1]); };
-    this.undo = function () { graph.edge.move(d, from[0], from[1]); };
+    this.redo = function () { graph.edge.nodes(d, to[0], to[1]); };
+    this.undo = function () { graph.edge.nodes(d, from[0], from[1]); };
 });
 
 Commands.prototype.create('spring', function (view) {
@@ -1476,7 +1308,6 @@ Commands.prototype.create('spring', function (view) {
     this.redo = function () { view.spring(true); };
     this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
 });
-
 
 
 // JSLint options:
@@ -1620,7 +1451,7 @@ var control_nodes_drag = (function () {
 var control_edge_drag = (function () {
     "use strict";
 
-    var mouse, d_source, node_d, edge_d, drag_target, edge_svg, from, exists;
+    var mouse, d_source, node_d, edge_d, drag_target, exists;
 
     var state, states = {
         init : function (view, source, d) {
@@ -1633,8 +1464,8 @@ var control_edge_drag = (function () {
                 // What to drag: head or tail of the edge? What is closer to the mouse pointer.
                 var head = [], tail = [];
                 mouse = view.pan.mouse();
-                vec.subtract(mouse, [d.x1, d.y1], tail);
-                vec.subtract(mouse, [d.x2, d.y2], head);
+                vec.subtract(mouse, [d.source.x, d.source.y], tail);
+                vec.subtract(mouse, [d.target.x, d.target.y], head);
                 drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
@@ -1648,13 +1479,12 @@ var control_edge_drag = (function () {
             case 'mouseout':
                 mouse = view.pan.mouse();
                 // Start dragging the edge
-                // Firstly, create new node with zero size
+                // First, create a new node with zero size
                 node_d = { x : mouse[0], y : mouse[1], r : 1 };
                 // Create new edge
                 edge_d = { source : d_source, target : node_d };
                 commands.start().add_edge(edge_d);
                 drag_target = true;
-                edge_svg = view.edge_by_data(edge_d).selectAll('path');
                 view.spring.off();
                 state = states.drag_edge;
                 break;
@@ -1666,20 +1496,15 @@ var control_edge_drag = (function () {
                 switch (d3.event.type) {
                 case 'mouseout':
                     mouse = view.pan.mouse();
-                    // Firstly, create new node with zero size
+                    // Firstly, create new node with (almost) zero size
                     node_d = { x : mouse[0], y : mouse[1], r : 1 };
                     edge_d = d;
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        d.target = node_d;
-                    } else {
-                        d.source = node_d;
-                    }
-                    // edge_d.text = d.text;
-                    commands.start().move_edge(edge_d, from, [edge_d.source, edge_d.target]);
-                    edge_svg = view.edge_by_data(edge_d).selectAll('path');
+                    commands.start().edge_nodes(edge_d,
+                        [d.source, d.target],
+                        drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
+                        );
                     view.unselect_all();
-                    view.select_edge(edge_d);
+                    view.edge.select(edge_d);
                     view.spring.off();
                     state = states.drag_edge;
                     break;
@@ -1695,13 +1520,15 @@ var control_edge_drag = (function () {
                 mouse = view.pan.mouse();
                 node_d.x = mouse[0];
                 node_d.y = mouse[1];
-                edge_svg.attr('d', elements.get_edge_transformation(edge_d));
+                view.edge.move(edge_d);
+                // edge_svg.attr('d', elements.get_edge_transformation(edge_d));
                 break;
             case 'mouseup':
                 delete node_d.r; // in order to use default radius
                 commands.add_node(node_d);
                 view.unselect_all();
-                view.select_edge(edge_d);
+                view.edge.move(edge_d); // to update wrt the node raduis
+                view.edge.select(edge_d);
                 view.node.select(drag_target ? edge_d.target : edge_d.source);
                 view.spring.on();
                 state = states.init;
@@ -1709,13 +1536,10 @@ var control_edge_drag = (function () {
             case 'mouseover':
                 switch (source) {
                 case 'node':
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        edge_d.target = d;
-                    } else {
-                        edge_d.source = d;
-                    }
-                    commands.move_edge(edge_d, from, [edge_d.source, edge_d.target]);
+                    commands.edge_nodes(edge_d,
+                        [edge_d.source, edge_d.target],
+                        drag_target ? [edge_d.source, d] : [d, edge_d.target]
+                        );
                     view.spring.off();
                     state = states.drop_edge_or_exit;
                     break;
@@ -1738,19 +1562,16 @@ var control_edge_drag = (function () {
                     }
                     if (!mode_add()) { view.unselect_all(); }
                     if (exists.length <= 1) {
-                        view.select_edge(edge_d);
+                        view.edge.select(edge_d);
                     }
                     view.spring.on();
                     state = states.init;
                     break;
                 case 'mouseout':
-                    from = [edge_d.source, edge_d.target];
-                    if (drag_target) {
-                        edge_d.target = node_d;
-                    } else {
-                        edge_d.source = node_d;
-                    }
-                    commands.move_edge(edge_d, from, [edge_d.source, edge_d.target]);
+                    commands.edge_nodes(edge_d,
+                        [edge_d.source, edge_d.target],
+                        drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
+                        );
                     view.spring.off();
                     state = states.drag_edge;
                     break;
@@ -1761,24 +1582,25 @@ var control_edge_drag = (function () {
     };
     state = states.init;
 
-    // // Give names to the states-functions for debugging
-    // var key;
-    // for (key in states) {
-    //     if (states.hasOwnProperty(key)) {
-    //         if (!states[key]._name) {
-    //             states[key]._name = key;
-    //         }
-    //     }
-    // }
+    // Give names to the states-functions for debugging
+    var key;
+    for (key in states) {
+        if (states.hasOwnProperty(key)) {
+            if (!states[key]._name) {
+                states[key]._name = key;
+            }
+        }
+    }
 
-    // var ost = state;
+    var ost = state;
+    var i = 0;
     return function loop() {
         state.apply(this, arguments);
-        // // Debug transitions
-        // if (ost !== state) {
-        //     console.log(ost._name, state._name);
-        //     ost = state;
-        // }
+        // Debug transitions
+        if (ost !== state) {
+            console.log(i++, ost._name, '->', state._name);
+            ost = state;
+        }
         loop.done = state === states.init;
         return loop;
     };
@@ -1799,7 +1621,7 @@ var Controller = (function () {
     var state;          // Reference to a current state
     var old_state;      // Reference to a previous state
 
-    var pan, x, y;
+    var x, y;
 
 
     // Helper function for text editor control
@@ -1824,7 +1646,7 @@ var Controller = (function () {
                 case 46: // Delete
                     nodes = view.node.selected();
                     // Get incoming and outgoing edges of deleted nodes, joined with selected edges 
-                    edges = view.selected_edges();
+                    edges = view.edge.selected();
                     edges = edges.concat(commands.graph.edge.adjacent(nodes).filter(
                         function (node) { return edges.indexOf(node) < 0; }
                     ));
@@ -1869,18 +1691,8 @@ var Controller = (function () {
                     }
                     state = states.wait_for_keyup;
                     break;
-                case 32:
-                    window.test_node = { x: 50, y: 50, initial: 1};
-                    view._node.add(window.test_node);
-                    break;
-                case 68:
-                    // view._node.remove([window.test_node]);
-                    delete window.test_node.initial;
-                    view._node.initial([window.test_node]);
-                    view._node.stress([window.test_node]);
-                    break;
-                default:
-                    console.log('Key', d3.event.keyCode);
+                // default:
+                //     console.log('Key', d3.event.keyCode);
                 }
             } else {
                 switch (source) {
@@ -1936,9 +1748,8 @@ var Controller = (function () {
                         }
                         break;
                     case 'dblclick':
-                        pan = view.pan();
-                        x = d.x + pan[0];
-                        y = d.y + pan[1];
+                        x = d3.event.layerX;
+                        y = d3.event.layerY;
                         control_text_edit(d3.select(this).select('text'), d.text, x, y, function (text) {
                             commands.start().node_text(d, text);
                         });
@@ -1950,30 +1761,28 @@ var Controller = (function () {
                     switch (d3.event.type) {
                     case 'mousedown':
                         // Conditional selection
-                        edges = view.selected_edges();
+                        edges = view.edge.selected();
                         // OR selection
                         if (mode_move()) {
-                            view.select_edge(d);
-                            edges = view.selected_edges();
+                            view.edge.select(d);
+                            edges = view.edge.selected();
                         } else {
                             // XOR selection mode
                             if (mode_add()) {
                                 // Invert selection of the node
-                                view.select_edge(d, edges.indexOf(d) < 0);
+                                view.edge.select(d, edges.indexOf(d) < 0);
                             } else {
                                 // AND selection
                                 view.unselect_all();
-                                view.select_edge(d);
+                                view.edge.select(d);
                             }
                         }
                         control_edge_drag.call(this, view, source, d);
                         state = states.drag_edge;
                         break;
                     case 'dblclick':
-                        pan = view.pan();
-                        x = d.tx + pan[0];
-                        y = d.ty + pan[1];
-
+                        x = d3.event.layerX;
+                        y = d3.event.layerY;
                         control_text_edit(d3.select(this).select('text'), d.text, x, y, function (text) {
                             commands.start().edge_text(d, text);
                         });
@@ -2071,6 +1880,7 @@ var Controller = (function () {
 
         // Sets event handlers for the given View
         var that = this;
+
         // Handles nodes events
         this.view.node.handler = function () {
             context.call(that, 'node');
@@ -2078,13 +1888,13 @@ var Controller = (function () {
         };
 
         // Handles edge events
-        this.view.edge_handler = function () {
+        this.view.edge.handler = function () {
             context.call(that, 'edge');
             event.apply(this, arguments);
         };
 
         // Handles plane (out of other elements) events
-        this.view.plane_handler = function () {
+        this.view.handler = function () {
             context.call(that, 'plane');
             event.apply(this, arguments);
         };
@@ -2092,7 +1902,6 @@ var Controller = (function () {
 
     return constructor;
 }());
-
 // JSLint options:
 /*global clone, float2int, wrap*/
 
@@ -2140,6 +1949,7 @@ var Graph = (function () {
          */
         this.shift = function (d, dxy) {
             foreach(d, shift, dxy);
+            this.edge.move(this.edge.adjacent(d));
         };
 
         /**
@@ -2157,6 +1967,7 @@ var Graph = (function () {
                     d.py = d.y;
                 });
             }
+            this.edge.move(this.edge.adjacent(d));
         };
 
         /**
@@ -2240,16 +2051,41 @@ var Graph = (function () {
         };
 
         /**
+         * Returns the edge if it exist for the given nodes, undefined otherwise
+         * @param  {Object} source node
+         * @param  {Object} target node
+         * @return {Object} edge
+         */
+        this.exists = function (source, target) {
+            var edge;
+            var i = this.data.length;
+            while (i--) {
+                edge = this.data[i];
+                if (edge.source === source && edge.target === target) {
+                    return edge;
+                }
+            }
+            return undefined;
+        };
+
+        /**
          * Changes edge's nodes to new given nodes
          * @param  {Object} edge
          * @param  {Object} source
          * @param  {Object} target
          */
-        this.move = function (d, source, target) {
+        this.nodes = function (d, source, target) {
             d.source = source;
             d.target = target;
         };
 
+        /**
+         * Moves the edge
+         * It is invoked when an edge's node is moved, though it may not affect the edge itslef
+         */
+        this.move = function () {
+            return;
+        };
     }
 
 
@@ -2357,6 +2193,9 @@ var Graph = (function () {
         this.node.data = [];
         this.edge.data = [];
 
+        // Let node methods access the edge methods
+        this.node.edge = this.edge;
+
         this.set_json(json_graph);
     };
 
@@ -2383,24 +2222,24 @@ var Graph = (function () {
         if (typeof json_graph === 'object') {
             // Copy nodes which are unique objects
             foreach(json_graph.nodes, function (node) {
-                if (typeof node === 'object' && this.indexOf(node) < 0) {
-                    this.push(node);
+                if (typeof node === 'object' && this.data.indexOf(node) < 0) {
+                    this.add(node);
                 }
-            }, this.node.data);
+            }, this.node);
 
             // Copy edges which have valid indexes to nodes, and replace indexes to nodes objects
             var self = this, i, j, num_nodes = this.node.data.length;
             foreach(json_graph.edges, function (edge) {
-                if (typeof edge === 'object' && this.indexOf(edge) < 0) {
+                if (typeof edge === 'object' && this.data.indexOf(edge) < 0) {
                     i = Number(edge.source);
                     j = Number(edge.target);
                     if (i >= 0 && i < num_nodes && j >= 0 && j < num_nodes) {
                         edge.source = self.node.data[i];
                         edge.target = self.node.data[j];
-                        this.push(edge);
+                        this.add(edge);
                     }
                 }
-            }, this.edge.data);
+            }, this.edge);
         }
     };
 
@@ -2420,7 +2259,7 @@ var Graph = (function () {
         });
         // Make deep clone, such that the objects of the copy will have no references to the source
         g = clone(g, true);
-        // Convert all the float values to integers
+        // Convert all float values to integers
         float2int(g);
         return g;
     };
@@ -2432,19 +2271,62 @@ var Graph = (function () {
 
 
 // JSLint options:
-/*global View, after*/
+/*global View, after, before*/
 
 // Incapsulates and returns the graph object.
-//  Overrides methods which change the graph. 
-//  When the methods are called invokes correspondent View methods.
-function wrap(graph, aView) {
+// Overrides methods which change the graph. 
+// When the methods are called invokes correspondent View methods.
+// Decides how some elements should be viewed.
+function wrap(graph, view) {
     "use strict";
 
-    var view = aView;
-
-    function update_view() {
-        view.update();
+    /**
+     * Sets the edge as stright, bended or loop
+     * @param  {Object} edge
+     */
+    function stright_bended_loop(edge) {
+        if (edge.source === edge.target) {
+            view.edge.loop(edge);
+        } else {
+            var e = graph.edge.exists(edge.target, edge.source);
+            if (e) {
+                view.edge.bended(e);
+                view.edge.bended(edge);
+            } else {
+                view.edge.stright(edge);
+            }
+        }
     }
+
+    /**
+     * Sets an edge opposite to the given as a stright
+     * @param  {Object} edge
+     */
+    function stright_opposite(edge) {
+        var e = graph.edge.exists(edge.target, edge.source);
+        if (e) {
+            view.edge.stright(e);
+        }
+    }
+
+    function edge_add(edge) {
+        view.edge.add(edge);
+        stright_bended_loop(edge);
+    }
+
+    function view_edge_add(edge) {
+        view.edge.foreach(edge, edge_add);
+    }
+
+    function edge_remove(edge) {
+        view.edge.remove(edge);
+        stright_opposite(edge);
+    }
+
+    function view_edge_remove(edges) {
+        view.edge.foreach(edges, edge_remove);
+    }
+
     //    object       key          hook function       this
     after(graph.node, 'add',        view.node.add,      view.node);
     after(graph.node, 'remove',     view.node.remove,   view.node);
@@ -2456,18 +2338,21 @@ function wrap(graph, aView) {
     after(graph.node, 'initial',    view.node.initial,  view.node);
     after(graph.node, 'stress',     view.node.stress,   view.node);
 
-    after(graph.edge, 'add',        update_view);
-    after(graph.edge, 'remove',     update_view);
-    after(graph.edge, 'text',       view.edge_text.bind(view));
-    after(graph.edge, 'move',       update_view);
-    after(graph.edge, 'stress',     view.stress_edge.bind(view));
+    after(graph.edge, 'add',        view_edge_add,      view.edge);
+    after(graph.edge, 'remove',     view_edge_remove,   view.edge);
+    after(graph.edge, 'text',       view.edge.text,     view.edge);
+    after(graph.edge, 'move',       view.edge.move,     view.edge);
+    after(graph.edge, 'stress',     view.edge.stress,   view.edge);
+
+    before(graph.edge, 'nodes',     stright_opposite);
+    after(graph.edge, 'nodes',      stright_bended_loop);
 
     return graph;
 }
 
 
 // JSLint options:
-/*global View, Graph, Commands, wrap, after, Controller*/
+/*global View, Graph, Commands, wrap, after, before, Controller*/
 
     /**
      * Creates a new instance of Editor
@@ -2506,6 +2391,7 @@ function wrap(graph, aView) {
         update.call(this);
 
         // Set callback which updates the view and commands when a user sets a new graph
+        before(this.graph, 'set_json', this.view.clear, this.view);
         after(this.graph, 'set_json', update.bind(this));
     };
 

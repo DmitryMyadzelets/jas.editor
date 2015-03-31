@@ -4,10 +4,10 @@ start.js \
 utils.js \
 vector.js \
 router.js \
-elements.js \
 textarea.js \
 pan.js \
 view.js \
+view.element.js \
 view.node.js \
 view.edge.js \
 view.select.js \
