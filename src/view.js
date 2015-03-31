@@ -57,17 +57,21 @@ function View(aContainer, aGraph) {
 
     this.handler = function () { return; };
 
-    // Makes current view focused and requests routing of window events (keys) to it
-    function focus() {
-        router.handle(this.handler);
+    function handler() {
+        self.handler.apply(this, arguments);
     }
 
-    svg.on('mousedown', this.handler)
+    // Makes current view focused and requests routing of window events (keys) to it
+    function focus() {
+        router.handle(handler);
+    }
+
+    svg.on('mousedown', handler)
         .on('mouseover', focus)
-        .on('mouseup', this.handler)
-        .on('mousemove', this.handler)
-        // .on('mouseout', this.handler)
-        .on('dblclick', this.handler)
+        .on('mouseup', handler)
+        .on('mousemove', handler)
+        // .on('mouseout', handler)
+        .on('dblclick', handler)
         .on('dragstart', function () { d3.event.preventDefault(); });
 
     // Arrow marker

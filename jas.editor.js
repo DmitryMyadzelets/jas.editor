@@ -364,27 +364,6 @@ function get_empty_graph() {
 }
 
 
-
-// Returns true if link 'a' is counter to link 'b'
-function has_counter_edge(d) {
-    return (this.target === d.source) && (this.source === d.target);
-}
-
-
-
-// Set type of the link (0-stright, 1-curved, 2-loop)
-function set_edge_type(d) {
-    if (d.source === d.target) {
-        d.type = 2;
-    } else if (this._graph.edges.filter(has_counter_edge, d).length > 0) {
-        d.type = 1;
-    } else {
-        d.type = 0;
-    }
-}
-
-
-
 function View(aContainer, aGraph) {
     "use strict";
     var self = this;
@@ -416,17 +395,21 @@ function View(aContainer, aGraph) {
 
     this.handler = function () { return; };
 
-    // Makes current view focused and requests routing of window events (keys) to it
-    function focus() {
-        router.handle(this.handler);
+    function handler() {
+        self.handler.apply(this, arguments);
     }
 
-    svg.on('mousedown', this.handler)
+    // Makes current view focused and requests routing of window events (keys) to it
+    function focus() {
+        router.handle(handler);
+    }
+
+    svg.on('mousedown', handler)
         .on('mouseover', focus)
-        .on('mouseup', this.handler)
-        .on('mousemove', this.handler)
-        // .on('mouseout', this.handler)
-        .on('dblclick', this.handler)
+        .on('mouseup', handler)
+        .on('mousemove', handler)
+        // .on('mouseout', handler)
+        .on('dblclick', handler)
         .on('dragstart', function () { d3.event.preventDefault(); });
 
     // Arrow marker
@@ -749,12 +732,6 @@ View.prototype.edge = (function () {
             var x1, y1, x2, y2, x, y, tx, ty, l;
             var path;
             var R = View.prototype.node.RADIUS;
-            // vec.subtract(v2, v1, v);    // v = v2 - v1
-            // vec.normalize(v, norm);     // norm = normalized v
-            // vec.scale(norm, this.r1, v);     // v = norm * r
-            // vec.add(v1, v, v1);         // v1 = v1 + v
-            // vec.scale(norm, this.r2, v);     // v = norm * r
-            // vec.subtract(v2, v, v2);    // v2 = v2 - v
 
             return function (d) {
                 // Coordinates of the source and target nodes
