@@ -1,6 +1,6 @@
 
 // JSLint options:
-/*global d3, View, commands, textarea, vec, elements, set_edge_type*/
+/*global d3, View, textarea, vec*/
 
 
 // Returns whether the editor is in the ADD mode
@@ -15,7 +15,6 @@ function mode_move() {
 }
 
 var commands;       // commands to manipulate the model
-
 
 
 // Controller of the selection by rectangle
@@ -140,7 +139,7 @@ var control_nodes_drag = (function () {
 var control_edge_drag = (function () {
     "use strict";
 
-    var mouse, d_source, node_d, edge_d, drag_target, exists;
+    var mouse, d_source, node_d, edge_d, drag_target, exists, node_over;
 
     var state, states = {
         init : function (view, source, d) {
@@ -170,7 +169,7 @@ var control_edge_drag = (function () {
                 // Start dragging the edge
                 // First, create a new node with zero size
                 node_d = { x : mouse[0], y : mouse[1], r : 1 };
-                // Create new edge
+                // Second, create a new edge to that node
                 edge_d = { source : d_source, target : node_d };
                 commands.start().add_edge(edge_d);
                 drag_target = true;
@@ -210,7 +209,6 @@ var control_edge_drag = (function () {
                 node_d.x = mouse[0];
                 node_d.y = mouse[1];
                 view.edge.move(edge_d);
-                // edge_svg.attr('d', elements.get_edge_transformation(edge_d));
                 break;
             case 'mouseup':
                 delete node_d.r; // in order to use default radius
@@ -218,13 +216,14 @@ var control_edge_drag = (function () {
                 view.unselect_all();
                 view.edge.move(edge_d); // to update wrt the node raduis
                 view.edge.select(edge_d);
-                view.node.select(drag_target ? edge_d.target : edge_d.source);
+                view.node.select(node_d);
                 view.spring.on();
                 state = states.init;
                 break;
             case 'mouseover':
                 switch (source) {
                 case 'node':
+                    node_over = d;
                     commands.edge_nodes(edge_d,
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, d] : [d, edge_d.target]
@@ -236,60 +235,65 @@ var control_edge_drag = (function () {
                 break;
             }
         },
-        drop_edge_or_exit : function (view, source) {
-            switch (source) {
-            case 'node':
-                switch (d3.event.type) {
-                case 'mouseup':
-                    // Get existing edges between selected nodes
-                    exists = view.graph().edges.filter(function (v) {
-                        return ((v.source === edge_d.source) && (v.target === edge_d.target));
-                    });
-                    if (exists.length > 1) {
-                        // Delete edge
-                        commands.del_edge(edge_d);
-                    }
-                    if (!mode_add()) { view.unselect_all(); }
-                    if (exists.length <= 1) {
-                        view.edge.select(edge_d);
-                    }
-                    view.spring.on();
-                    state = states.init;
-                    break;
-                case 'mouseout':
+        drop_edge_or_exit : function (view, source, d) {
+            switch (d3.event.type) {
+            // The mousemove event is more practical here, since a sequence of
+            // mouseover-mouseout events occures when the node consits of multiple elements.
+            // These elements are in the same group, so they own the same data linked to the group.
+            case 'mousemove':
+                // Don't let the event pass to a parent element
+                if (source === 'node') {
+                    d3.event.stopPropagation();
+                }
+                if (d !== node_over) {
                     commands.edge_nodes(edge_d,
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
                         );
                     view.spring.off();
                     state = states.drag_edge;
-                    break;
                 }
+                break;
+            case 'mouseup':
+                // Get existing edges between selected nodes
+                exists = view.graph().edges.filter(function (v) {
+                    return ((v.source === edge_d.source) && (v.target === edge_d.target));
+                });
+                if (exists.length > 1) {
+                    // Delete edge
+                    commands.del_edge(edge_d);
+                }
+                if (!mode_add()) { view.unselect_all(); }
+                if (exists.length <= 1) {
+                    view.edge.select(edge_d);
+                }
+                view.spring.on();
+                state = states.init;
                 break;
             }
         }
     };
     state = states.init;
 
-    // Give names to the states-functions for debugging
-    var key;
-    for (key in states) {
-        if (states.hasOwnProperty(key)) {
-            if (!states[key]._name) {
-                states[key]._name = key;
-            }
-        }
-    }
+    // // Give names to the states-functions for debugging
+    // var key;
+    // for (key in states) {
+    //     if (states.hasOwnProperty(key)) {
+    //         if (!states[key]._name) {
+    //             states[key]._name = key;
+    //         }
+    //     }
+    // }
 
-    var ost = state;
-    var i = 0;
+    // var ost = state;
+    // var i = 0;
     return function loop() {
         state.apply(this, arguments);
         // Debug transitions
-        if (ost !== state) {
-            console.log(i++, ost._name, '->', state._name);
-            ost = state;
-        }
+        // if (ost !== state) {
+        //     console.log(i++, ost._name, '->', state._name);
+        //     ost = state;
+        // }
         loop.done = state === states.init;
         return loop;
     };

@@ -22,6 +22,7 @@ View.prototype.node = (function () {
         function add(d) {
             var g = this.root.append('g')
                 .datum(d)
+                .on('mousemove', this.handler)
                 .on('mousedown', this.handler)
                 .on('mouseup', this.handler)
                 .on('mouseover', this.handler)
