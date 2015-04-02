@@ -149,12 +149,14 @@ var control_edge_drag = (function () {
                 state = states.wait_for_new_edge;
                 break;
             case 'edge':
-                // What to drag: head or tail of the edge? What is closer to the mouse pointer.
-                var head = [], tail = [];
+                // What to drag: head or tail of the edge?
+                // Drag what is closer to the mouse pointer.
+                // var head = [], tail = [];
                 mouse = view.pan.mouse();
-                vec.subtract(mouse, [d.source.x, d.source.y], tail);
-                vec.subtract(mouse, [d.target.x, d.target.y], head);
-                drag_target = vec.length(head) < vec.length(tail);
+                drag_target = view.edge.is_head(d, mouse);
+                // vec.subtract(mouse, [d.source.x, d.source.y], tail);
+                // vec.subtract(mouse, [d.target.x, d.target.y], head);
+                // drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
             }

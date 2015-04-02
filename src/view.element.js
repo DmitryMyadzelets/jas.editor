@@ -4,6 +4,7 @@
 
 /**
  * Prototype object for the objects View.prototype.node and View.prototype.edge
+ * with their common methods.
  */
 View.prototype.element = (function () {
     "use strict";

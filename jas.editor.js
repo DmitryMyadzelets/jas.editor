@@ -518,6 +518,7 @@ view_methods.call(View.prototype);
 
 /**
  * Prototype object for the objects View.prototype.node and View.prototype.edge
+ * with their common methods.
  */
 View.prototype.element = (function () {
     "use strict";
@@ -852,28 +853,12 @@ View.prototype.edge = (function () {
         */
         var loop = (function () {
             // Constants for loop calculation
-            var R = View.prototype.node.RADIUS;
-            var K = (function () {
-                var ANGLE_FROM = Math.PI / 3;
-                var ANGLE_TO = Math.PI / 12;
-                return {
-                    DX1 : R * Math.cos(ANGLE_FROM),
-                    DY1 : R * Math.sin(ANGLE_FROM),
-                    DX2 : R * 4 * Math.cos(ANGLE_FROM),
-                    DY2 : R * 4 * Math.sin(ANGLE_FROM),
-                    DX3 : R * 4 * Math.cos(ANGLE_TO),
-                    DY3 : R * 4 * Math.sin(ANGLE_TO),
-                    DX4 : R * Math.cos(ANGLE_TO),
-                    DY4 : R * Math.sin(ANGLE_TO),
-                    NX : Math.cos(ANGLE_FROM - Math.PI / 24),
-                    NY : Math.sin(ANGLE_FROM - Math.PI / 24)
-                };
-            }());
+            var K, R = View.prototype.node.RADIUS;
 
             var x1, y1, x2, y2, x, y, cx1, cy1, cx2, cy2, tx, ty;
             var path;
 
-            return function (d) {
+            var fun = function (d) {
                 // Coordinates of the source and target nodes
                 x1 = d.source.x;
                 y1 = d.source.y;
@@ -915,7 +900,48 @@ View.prototype.edge = (function () {
                 d.view().selectAll('path').attr('d', path);
                 d.view().select('text').attr('x', tx).attr('y', ty);
             };
+
+            // Constants for loop calculation
+            K = (function () {
+                var ANGLE_FROM = Math.PI / 3;
+                var ANGLE_TO = Math.PI / 12;
+                return {
+                    DX1 : R * Math.cos(ANGLE_FROM),
+                    DY1 : R * Math.sin(ANGLE_FROM),
+                    DX2 : R * 4 * Math.cos(ANGLE_FROM),
+                    DY2 : R * 4 * Math.sin(ANGLE_FROM),
+                    DX3 : R * 4 * Math.cos(ANGLE_TO),
+                    DY3 : R * 4 * Math.sin(ANGLE_TO),
+                    DX4 : R * Math.cos(ANGLE_TO),
+                    DY4 : R * Math.sin(ANGLE_TO),
+                    NX : Math.cos(ANGLE_FROM - Math.PI / 24),
+                    NY : Math.sin(ANGLE_FROM - Math.PI / 24)
+                };
+            }());
+            // let access to the constants
+            fun.K = K;
+            return fun;
         }());
+
+        function length(ax, ay, bx, by) {
+            var x = ax - bx;
+            var y = ay - by;
+            return Math.sqrt(x * x + y * y);
+        }
+
+        // Returns whether the given coordinates correspond to head or tail of the stright edge
+        stright.is_head = function (d, xy) {
+            return length(d.source.x, d.source.y, xy[0], xy[1]) > length(d.target.x, d.target.y, xy[0], xy[1]);
+        };
+
+        bended.is_head = stright.is_head;
+
+        // Returns whether the given coordinates correspond to head or tail of the loop edge
+        loop.is_head = function (d, xy) {
+            var a = length(d.source.x + loop.K.DX2, d.source.y + loop.K.DY2, xy[0], xy[1]);
+            var b = length(d.target.x + loop.K.DX3, d.target.y + loop.K.DY3, xy[0], xy[1]);
+            return a > b;
+        };
 
         function add(d) {
             var g = this.root.append('g')
@@ -996,6 +1022,16 @@ View.prototype.edge = (function () {
         this.loop = function (d) {
             d.path = loop;
             this.move(d);
+        };
+
+        /**
+         * Returns whether the given coordinates correspond to head or tail of the edge
+         * @param  {Object}  d  edge
+         * @param  {Array}  xy Coordinates
+         * @return {Boolean}
+         */
+        this.is_head = function (d, xy) {
+            return d.path.is_head(d, xy);
         };
 
     }
@@ -1438,12 +1474,14 @@ var control_edge_drag = (function () {
                 state = states.wait_for_new_edge;
                 break;
             case 'edge':
-                // What to drag: head or tail of the edge? What is closer to the mouse pointer.
-                var head = [], tail = [];
+                // What to drag: head or tail of the edge?
+                // Drag what is closer to the mouse pointer.
+                // var head = [], tail = [];
                 mouse = view.pan.mouse();
-                vec.subtract(mouse, [d.source.x, d.source.y], tail);
-                vec.subtract(mouse, [d.target.x, d.target.y], head);
-                drag_target = vec.length(head) < vec.length(tail);
+                drag_target = view.edge.is_head(d, mouse);
+                // vec.subtract(mouse, [d.source.x, d.source.y], tail);
+                // vec.subtract(mouse, [d.target.x, d.target.y], head);
+                // drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
             }
