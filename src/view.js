@@ -17,15 +17,6 @@
 //         <path .catch>
 
 
-// Returns new empty graphoo
-function get_empty_graph() {
-    return {
-        nodes: [],
-        edges: []
-    };
-}
-
-
 function View(aContainer) {
     "use strict";
     var self = this;
