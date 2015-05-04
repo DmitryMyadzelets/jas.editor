@@ -139,7 +139,7 @@ var control_nodes_drag = (function () {
 var control_edge_drag = (function () {
     "use strict";
 
-    var mouse, d_source, node_d, edge_d, drag_target, exists, node_over;
+    var mouse, d_source, node_d, edge_d, drag_target, exists = [], node_over;
 
     // Returns new node for edge dragging
     function dummy_node() {
@@ -253,8 +253,11 @@ var control_edge_drag = (function () {
                 break;
             case 'mouseup':
                 // Get existing edges between selected nodes
-                exists = view.graph().edges.filter(function (v) {
-                    return ((v.source === edge_d.source) && (v.target === edge_d.target));
+                exists.length = 0;
+                view.edge.each(function (v) {
+                    if ((v.source === edge_d.source) && (v.target === edge_d.target)) {
+                        exists.push(d);
+                    }
                 });
                 if (exists.length > 1) {
                     // Delete edge
