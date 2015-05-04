@@ -1517,7 +1517,7 @@ var control_edge_drag = (function () {
         drop_edge_or_exit : function (view, source, d) {
             switch (d3.event.type) {
             // The mousemove event is more practical here, since a sequence of
-            // mouseover-mouseout events occures when the node consits of multiple elements.
+            // mouseover-mouseout events may occure when the node consists of multiple elements.
             // These elements are in the same group, so they own the same data linked to the group.
             case 'mousemove':
                 // Don't let the event pass to a parent element
