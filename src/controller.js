@@ -34,13 +34,13 @@ var control_selection = (function () {
         ready : function (view) {
             switch (d3.event.type) {
             case 'mousemove':
-                if (!mode_add()) { view.unselect_all(); }
+                if (!mode_add()) { view.unselect(); }
                 rect = view.selection_rectangle();
                 rect.show(mouse);
                 state = states.update;
                 break;
             case 'mouseup':
-                if (!mode_add()) { view.unselect_all(); }
+                if (!mode_add()) { view.unselect(); }
                 state = states.init;
                 break;
             default:
@@ -192,7 +192,7 @@ var control_edge_drag = (function () {
                         [d.source, d.target],
                         drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
                         );
-                    view.unselect_all();
+                    view.unselect();
                     view.edge.select(edge_d);
                     state = states.drag_edge;
                     break;
@@ -213,7 +213,7 @@ var control_edge_drag = (function () {
             case 'mouseup':
                 delete node_d.r; // in order to use default radius
                 commands.add_node(node_d);
-                view.unselect_all();
+                view.unselect();
                 view.edge.move(edge_d); // to update wrt the node raduis
                 view.edge.select(edge_d);
                 view.node.select(node_d);
@@ -263,7 +263,7 @@ var control_edge_drag = (function () {
                     // Delete edge
                     commands.del_edge(edge_d);
                 }
-                if (!mode_add()) { view.unselect_all(); }
+                if (!mode_add()) { view.unselect(); }
                 if (exists.length <= 1) {
                     view.edge.select(edge_d);
                 }
@@ -391,7 +391,7 @@ var Controller = (function () {
                         // placed here to prevent the enumeration of other cases
                         break;
                     case 'dblclick':
-                        if (!mode_add()) { view.unselect_all(); }
+                        if (!mode_add()) { view.unselect(); }
                         mouse = view.pan.mouse();
                         // Create new node
                         var node = { x : mouse[0], y : mouse[1] };
@@ -422,7 +422,7 @@ var Controller = (function () {
                                 view.node.select(d, view.node.selected().indexOf(d) < 0);
                             } else {
                                 // AND selection
-                                view.unselect_all();
+                                view.unselect();
                                 view.node.select(d);
                             }
                         }
@@ -462,7 +462,7 @@ var Controller = (function () {
                                 view.edge.select(d, edges.indexOf(d) < 0);
                             } else {
                                 // AND selection
-                                view.unselect_all();
+                                view.unselect();
                                 view.edge.select(d);
                             }
                         }

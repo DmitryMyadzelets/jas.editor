@@ -104,8 +104,8 @@ function view_methods() {
         }
     };
 
-    // Unselect all graph elements
-    this.unselect_all = function () {
+    // Unselect all elements
+    this.unselect = function () {
         this.svg.selectAll('.selected').classed('selected', false);
     };
 }
