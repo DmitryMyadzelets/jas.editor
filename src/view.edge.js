@@ -273,6 +273,17 @@ View.prototype.edge = (function () {
         this.create = function (root) {
             var o = Object.create(edge);
             o.root = root.append('g').attr('class', 'edges');
+            // Arrow marker
+            o.root.append('defs')
+                .append('marker')
+                    .attr('id', 'marker-arrow')
+                    .attr('orient', 'auto')
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('refX', 6)
+                    .attr('refY', 3)
+                .append('path')
+                    .attr('d', 'M0,0 L6,3 L0,6');
             return o;
         };
 

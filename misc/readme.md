@@ -85,23 +85,23 @@ For one element only:
 
 ### Presence of methods
 
-    graph        wrapper   undo     view.
+    graph        wrapper   undo     View    
     node
-        add         +       +       update
-        remove      +       +       update
-        text        +       +       node_text
-        move        +       +       update
-        stress      +               stress_node
-        shift       +               transform
-        mark        +       +       mark_node
-        unmark      +       +       mark_node
-        initial     +       +       initial
+        add         +       +       +
+        remove      +       +       +
+        text        +       +       +
+        move        +       +       +
+        stress      +               +
+        shift       +               move
+        mark        +       +       +
+        unmark      +       +       mark
+        initial     +       +       +
     edge
-        add         +       +       update
-        remove      +       +       update
-        text        +       +       edge_text
-        move        +       +       update
-        stress      +               stress_edge
+        add         +       +       +
+        remove      +       +       +
+        text        +       +       +
+        nodes       +       +       
+        stress      +               +
         adjacent
         incoming
         outgoing
@@ -111,7 +111,7 @@ For one element only:
 
 ### Problem with `.node.` and `.edge.` namespacing
 
-The `node` and `edge` properties of graph are created dynamically. Than, they do not access to each other. Though each edge has access to `source` and `target` edges it can't access all of them. The nodes have no access to edges at all. There are some operations when we have a node as the input and edges as the output.  As a solution the reference to the nodes can be passed into the constructor. For example:
+The `node` and `edge` properties of the graph are created dynamically. Than, they do not access to each other. Though each edge has access to `source` and `target` edges it can't access all of them. The nodes have no access to edges at all. There are some operations when we have a node as the input and edges as the output.  As a solution the reference to the nodes can be passed into the constructor. For example:
 
     var edges = new Edges(); // nodes can be passed here though
     var nodes = new Nodes(edges);

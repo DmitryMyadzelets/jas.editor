@@ -67,7 +67,7 @@ function float2int(obj) {
  * @param  {Object} object An object.
  * @param  {Function} method A method of the object.
  * @param  {Function} hook A callback function which will be called after the call of object's method.
- * @param  {Function} [context] Context wich will passed to the hook instead of `this`.
+ * @param  {Function} [context] Context which will passed to the hook instead of `this`.
  * @return {Function} after Returns itself for chained calls.
  */
 function after(object, method, hook, that) {
@@ -376,8 +376,6 @@ function View(aContainer, aGraph) {
     var height = 300;
 
     var svg = container.append('svg')
-        // .attr('xmlns', 'http://www.w3.org/2000/svg')
-        // .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
         .attr('width', width)
         .attr('height', height)
         .classed('unselectable', true)
@@ -412,63 +410,19 @@ function View(aContainer, aGraph) {
         .on('dblclick', handler)
         .on('dragstart', function () { d3.event.preventDefault(); });
 
-    // Arrow marker
-    var defs = svg.append('svg:defs');
+    var root = svg.append('g');
+    this.node = View.prototype.node.create(root);
+    this.edge = View.prototype.edge.create(root);
 
-    defs.append('svg:marker')
-            .attr('id', 'marker-arrow')
-            .attr('orient', 'auto')
-            .attr('markerWidth', 6)
-            .attr('markerHeight', 6)
-            .attr('refX', 6)
-            .attr('refY', 3)
-        .append('svg:path')
-            .attr('d', 'M0,0 L6,3 L0,6');
+    this.container = container;
+    this.pan = pan(root);
+    this.svg = svg;
 
-    var root_group = svg.append('g');
-
-    this.transform = function () {
-        self.edge.move(this._graph.edges);
-    };
-
-    var force = d3.layout.force()
+    this.force = d3.layout.force()
         .charge(-800)
         .linkDistance(150)
         .chargeDistance(450)
-        .size([width, height])
-        .on('tick', this.transform);
-
-    this.spring = (function () {
-        var started = false;
-        var fn = function (start) {
-            if (arguments.length) {
-                if (start) {
-                    if (started) {
-                        force.resume();
-                    } else {
-                        force.start();
-                        started = true;
-                    }
-                } else {
-                    force.stop();
-                    started = false;
-                }
-            }
-            return started;
-        };
-        fn.on = function () { if (started) { force.resume(); } };
-        fn.off = function () { if (started) { force.stop(); } };
-        return fn;
-    }());
-
-
-    this.node = View.prototype.node.create(root_group);
-    this.edge = View.prototype.edge.create(root_group);
-
-    this.container = container;
-    this.pan = pan(root_group);
-    this.svg = svg;
-    this.force = force;
+        .size([width, height]);
 
     // Attach graph
     this.graph(aGraph);
@@ -619,7 +573,7 @@ View.prototype.node = (function () {
                 .on('mouseout', this.handler)
                 .on('dblclick', this.handler);
 
-            g.append('circle').attr('r', this.RADIUS);
+            g.append('circle').attr('r', d.r || this.RADIUS);
 
             d.view = function () { return g; };
 
@@ -982,6 +936,17 @@ View.prototype.edge = (function () {
         this.create = function (root) {
             var o = Object.create(edge);
             o.root = root.append('g').attr('class', 'edges');
+            // Arrow marker
+            o.root.append('defs')
+                .append('marker')
+                    .attr('id', 'marker-arrow')
+                    .attr('orient', 'auto')
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('refX', 6)
+                    .attr('refY', 3)
+                .append('path')
+                    .attr('d', 'M0,0 L6,3 L0,6');
             return o;
         };
 
@@ -1314,14 +1279,14 @@ Commands.prototype.create('edge_nodes', function (d, from, to) {
     this.undo = function () { graph.edge.nodes(d, from[0], from[1]); };
 });
 
-Commands.prototype.create('spring', function (view) {
-    var graph = this.graph;
-    var xy = [];
-    var nodes =  graph.object().nodes;
-    nodes.forEach(function (d) { xy.push(d.x, d.y); });
-    this.redo = function () { view.spring(true); };
-    this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
-});
+// Commands.prototype.create('spring', function (view) {
+//     var graph = this.graph;
+//     var xy = [];
+//     var nodes =  graph.object().nodes;
+//     nodes.forEach(function (d) { xy.push(d.x, d.y); });
+//     this.redo = function () { view.spring(true); };
+//     this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
+// });
 
 
 // JSLint options:
@@ -1432,19 +1397,19 @@ var control_nodes_drag = (function () {
                 xy[1] = mouse[1] - xy[1];
                 // Change positions of the selected nodes
                 commands.graph.node.shift(nodes, xy);
-                view.spring.on();
                 xy[0] = mouse[0];
                 xy[1] = mouse[1];
                 break;
             case 'mouseup':
                 to_xy.length = 0;
-                nodes.forEach(function (d) { delete d.fixed; to_xy.push(d.x, d.y); });
+                nodes.forEach(function (d) { to_xy.push(d.x, d.y); });
                 // Record the command only when the force is not working
-                if (view.spring()) {
-                    view.spring.on();
-                } else {
-                    commands.start().move_node(nodes, from_xy, to_xy);
-                }
+                // if (view.spring()) {
+                //     view.spring.on();
+                // } else {
+                //     commands.start().move_node(nodes, from_xy, to_xy);
+                // }
+                commands.start().move_node(nodes, from_xy, to_xy);
                 state = states.init;
                 break;
             }
@@ -1466,6 +1431,11 @@ var control_edge_drag = (function () {
 
     var mouse, d_source, node_d, edge_d, drag_target, exists, node_over;
 
+    // Returns new node for edge dragging
+    function dummy_node() {
+        return { x : mouse[0], y : mouse[1], r : 1, weight : 1 };
+    }
+
     var state, states = {
         init : function (view, source, d) {
             d_source = d;
@@ -1474,14 +1444,8 @@ var control_edge_drag = (function () {
                 state = states.wait_for_new_edge;
                 break;
             case 'edge':
-                // What to drag: head or tail of the edge?
-                // Drag what is closer to the mouse pointer.
-                // var head = [], tail = [];
                 mouse = view.pan.mouse();
                 drag_target = view.edge.is_head(d, mouse);
-                // vec.subtract(mouse, [d.source.x, d.source.y], tail);
-                // vec.subtract(mouse, [d.target.x, d.target.y], head);
-                // drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
             }
@@ -1494,13 +1458,13 @@ var control_edge_drag = (function () {
             case 'mouseout':
                 mouse = view.pan.mouse();
                 // Start dragging the edge
-                // First, create a new node with zero size
-                node_d = { x : mouse[0], y : mouse[1], r : 1 };
+                // Create new (dummy) node
+                node_d = dummy_node();
                 // Second, create a new edge to that node
                 edge_d = { source : d_source, target : node_d };
-                commands.start().add_edge(edge_d);
+                commands.start()
+                    .add_edge(edge_d);
                 drag_target = true;
-                view.spring.off();
                 state = states.drag_edge;
                 break;
             }
@@ -1511,8 +1475,8 @@ var control_edge_drag = (function () {
                 switch (d3.event.type) {
                 case 'mouseout':
                     mouse = view.pan.mouse();
-                    // Firstly, create new node with (almost) zero size
-                    node_d = { x : mouse[0], y : mouse[1], r : 1 };
+                    // Create new (dummy) node
+                    node_d = dummy_node();
                     edge_d = d;
                     commands.start().edge_nodes(edge_d,
                         [d.source, d.target],
@@ -1520,7 +1484,6 @@ var control_edge_drag = (function () {
                         );
                     view.unselect_all();
                     view.edge.select(edge_d);
-                    view.spring.off();
                     state = states.drag_edge;
                     break;
                 default:
@@ -1544,7 +1507,6 @@ var control_edge_drag = (function () {
                 view.edge.move(edge_d); // to update wrt the node raduis
                 view.edge.select(edge_d);
                 view.node.select(node_d);
-                view.spring.on();
                 state = states.init;
                 break;
             case 'mouseover':
@@ -1555,7 +1517,6 @@ var control_edge_drag = (function () {
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, d] : [d, edge_d.target]
                         );
-                    view.spring.off();
                     state = states.drop_edge_or_exit;
                     break;
                 }
@@ -1577,7 +1538,6 @@ var control_edge_drag = (function () {
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
                         );
-                    view.spring.off();
                     state = states.drag_edge;
                 }
                 break;
@@ -1594,7 +1554,6 @@ var control_edge_drag = (function () {
                 if (exists.length <= 1) {
                     view.edge.select(edge_d);
                 }
-                view.spring.on();
                 state = states.init;
                 break;
             }
@@ -1616,7 +1575,7 @@ var control_edge_drag = (function () {
     // var i = 0;
     return function loop() {
         state.apply(this, arguments);
-        // Debug transitions
+        // // Debug transitions
         // if (ost !== state) {
         //     console.log(i++, ost._name, '->', state._name);
         //     ost = state;
@@ -1643,7 +1602,6 @@ var Controller = (function () {
 
     var x, y;
 
-
     // Helper function for text editor control
     function control_text_edit(selection, text, x, y, enter) {
         // Remove old text until the end of editing
@@ -1657,7 +1615,6 @@ var Controller = (function () {
                 selection.text(text);
             });
     }
-
 
     var states = {
         init : function (d) {
@@ -1676,12 +1633,7 @@ var Controller = (function () {
                     state = states.wait_for_keyup;
                     break;
                 case 70: // F
-                    // On/off spring behaviour
-                    if (view.spring()) {
-                        view.spring(false);
-                    } else {
-                        commands.start().spring(view);
-                    }
+                    // On/off forces behaviour
                     break;
                 case 73: // I
                     // Mark a selected state as the initial one
@@ -1700,14 +1652,12 @@ var Controller = (function () {
                 case 89: // Y
                     if (mode_add()) {
                         commands.redo();
-                        view.spring.on();
                     }
                     state = states.wait_for_keyup;
                     break;
                 case 90: // Z
                     if (mode_add()) {
                         commands.undo();
-                        view.spring.on();
                     }
                     state = states.wait_for_keyup;
                     break;
@@ -2010,6 +1960,15 @@ var Graph = (function () {
             foreach(this.data, uninitial);
             foreach(d, initial);
         };
+
+        /**
+         * Calls function 'fun' for a each node
+         * @param  {Function}
+         * @param  {Object} [context]
+         */
+        this.foreach = function (fun, that) {
+            foreach.call(this, this.data, fun, that);
+        };
     }
 
     /**
@@ -2105,6 +2064,15 @@ var Graph = (function () {
          */
         this.move = function () {
             return;
+        };
+
+        /**
+         * Calls function 'fun' for a each edge
+         * @param  {Function}
+         * @param  {Object} [context]
+         */
+        this.foreach = function (fun, that) {
+            foreach.call(this, this.data, fun, that);
         };
     }
 
@@ -2367,6 +2335,54 @@ function wrap(graph, view) {
     before(graph.edge, 'nodes',     stright_opposite);
     after(graph.edge, 'nodes',      stright_bended_loop);
 
+
+    before(graph, 'set_json', view.clear, view);
+
+    // d3.js force logic
+
+    var force = view.force;
+    force.nodes(graph.node.data).links(graph.edge.data);
+    force.on('tick', function () {
+        view.node.move(graph.node.data);
+        view.edge.move(graph.edge.data);
+    });
+
+    /**
+     * Fixes the nodes which have coordinates
+     * @return {boolean}   True if all the nodes are fixed
+     */
+    var fix_nodes = (function () {
+        var all;
+        function fix(node) {
+            if (node.x !== undefined && node.y !== undefined) {
+                node.fixed = true;
+            } else {
+                delete node.fixed;
+                all = false;
+            }
+        }
+        return function () {
+            all = true;
+            graph.node.foreach(fix);
+            return all;
+        };
+    }());
+
+
+    function start_force() {
+        if (!fix_nodes()) {
+            force.start();
+        }
+    }
+
+    force.on('end', function () {
+        start_force();
+    });
+
+    after(graph, 'set_json', start_force);
+    after(graph.node, 'add', start_force);
+    after(graph.edge, 'add', start_force);
+
     return graph;
 }
 
@@ -2411,7 +2427,6 @@ function wrap(graph, view) {
         update.call(this);
 
         // Set callback which updates the view and commands when a user sets a new graph
-        before(this.graph, 'set_json', this.view.clear, this.view);
         after(this.graph, 'set_json', update.bind(this));
     };
 

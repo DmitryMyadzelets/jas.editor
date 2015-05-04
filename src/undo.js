@@ -179,12 +179,12 @@ Commands.prototype.create('edge_nodes', function (d, from, to) {
     this.undo = function () { graph.edge.nodes(d, from[0], from[1]); };
 });
 
-Commands.prototype.create('spring', function (view) {
-    var graph = this.graph;
-    var xy = [];
-    var nodes =  graph.object().nodes;
-    nodes.forEach(function (d) { xy.push(d.x, d.y); });
-    this.redo = function () { view.spring(true); };
-    this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
-});
+// Commands.prototype.create('spring', function (view) {
+//     var graph = this.graph;
+//     var xy = [];
+//     var nodes =  graph.object().nodes;
+//     nodes.forEach(function (d) { xy.push(d.x, d.y); });
+//     this.redo = function () { view.spring(true); };
+//     this.undo = function () { view.spring(false); graph.node.move(nodes, xy); };
+// });
 

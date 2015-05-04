@@ -41,7 +41,7 @@ function float2int(obj) {
  * @param  {Object} object An object.
  * @param  {Function} method A method of the object.
  * @param  {Function} hook A callback function which will be called after the call of object's method.
- * @param  {Function} [context] Context wich will passed to the hook instead of `this`.
+ * @param  {Function} [context] Context which will passed to the hook instead of `this`.
  * @return {Function} after Returns itself for chained calls.
  */
 function after(object, method, hook, that) {

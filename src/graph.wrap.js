@@ -76,6 +76,54 @@ function wrap(graph, view) {
     before(graph.edge, 'nodes',     stright_opposite);
     after(graph.edge, 'nodes',      stright_bended_loop);
 
+
+    before(graph, 'set_json', view.clear, view);
+
+    // d3.js force logic
+
+    var force = view.force;
+    force.nodes(graph.node.data).links(graph.edge.data);
+    force.on('tick', function () {
+        view.node.move(graph.node.data);
+        view.edge.move(graph.edge.data);
+    });
+
+    /**
+     * Fixes the nodes which have coordinates
+     * @return {boolean}   True if all the nodes are fixed
+     */
+    var fix_nodes = (function () {
+        var all;
+        function fix(node) {
+            if (node.x !== undefined && node.y !== undefined) {
+                node.fixed = true;
+            } else {
+                delete node.fixed;
+                all = false;
+            }
+        }
+        return function () {
+            all = true;
+            graph.node.foreach(fix);
+            return all;
+        };
+    }());
+
+
+    function start_force() {
+        if (!fix_nodes()) {
+            force.start();
+        }
+    }
+
+    force.on('end', function () {
+        start_force();
+    });
+
+    after(graph, 'set_json', start_force);
+    after(graph.node, 'add', start_force);
+    after(graph.edge, 'add', start_force);
+
     return graph;
 }
 

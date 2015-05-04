@@ -86,6 +86,15 @@ var Graph = (function () {
             foreach(this.data, uninitial);
             foreach(d, initial);
         };
+
+        /**
+         * Calls function 'fun' for a each node
+         * @param  {Function}
+         * @param  {Object} [context]
+         */
+        this.foreach = function (fun, that) {
+            foreach.call(this, this.data, fun, that);
+        };
     }
 
     /**
@@ -181,6 +190,15 @@ var Graph = (function () {
          */
         this.move = function () {
             return;
+        };
+
+        /**
+         * Calls function 'fun' for a each edge
+         * @param  {Function}
+         * @param  {Object} [context]
+         */
+        this.foreach = function (fun, that) {
+            foreach.call(this, this.data, fun, that);
         };
     }
 

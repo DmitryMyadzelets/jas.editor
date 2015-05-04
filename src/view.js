@@ -38,8 +38,6 @@ function View(aContainer, aGraph) {
     var height = 300;
 
     var svg = container.append('svg')
-        // .attr('xmlns', 'http://www.w3.org/2000/svg')
-        // .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
         .attr('width', width)
         .attr('height', height)
         .classed('unselectable', true)
@@ -74,63 +72,19 @@ function View(aContainer, aGraph) {
         .on('dblclick', handler)
         .on('dragstart', function () { d3.event.preventDefault(); });
 
-    // Arrow marker
-    var defs = svg.append('svg:defs');
+    var root = svg.append('g');
+    this.node = View.prototype.node.create(root);
+    this.edge = View.prototype.edge.create(root);
 
-    defs.append('svg:marker')
-            .attr('id', 'marker-arrow')
-            .attr('orient', 'auto')
-            .attr('markerWidth', 6)
-            .attr('markerHeight', 6)
-            .attr('refX', 6)
-            .attr('refY', 3)
-        .append('svg:path')
-            .attr('d', 'M0,0 L6,3 L0,6');
+    this.container = container;
+    this.pan = pan(root);
+    this.svg = svg;
 
-    var root_group = svg.append('g');
-
-    this.transform = function () {
-        self.edge.move(this._graph.edges);
-    };
-
-    var force = d3.layout.force()
+    this.force = d3.layout.force()
         .charge(-800)
         .linkDistance(150)
         .chargeDistance(450)
-        .size([width, height])
-        .on('tick', this.transform);
-
-    this.spring = (function () {
-        var started = false;
-        var fn = function (start) {
-            if (arguments.length) {
-                if (start) {
-                    if (started) {
-                        force.resume();
-                    } else {
-                        force.start();
-                        started = true;
-                    }
-                } else {
-                    force.stop();
-                    started = false;
-                }
-            }
-            return started;
-        };
-        fn.on = function () { if (started) { force.resume(); } };
-        fn.off = function () { if (started) { force.stop(); } };
-        return fn;
-    }());
-
-
-    this.node = View.prototype.node.create(root_group);
-    this.edge = View.prototype.edge.create(root_group);
-
-    this.container = container;
-    this.pan = pan(root_group);
-    this.svg = svg;
-    this.force = force;
+        .size([width, height]);
 
     // Attach graph
     this.graph(aGraph);

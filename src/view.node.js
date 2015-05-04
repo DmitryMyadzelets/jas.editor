@@ -29,7 +29,7 @@ View.prototype.node = (function () {
                 .on('mouseout', this.handler)
                 .on('dblclick', this.handler);
 
-            g.append('circle').attr('r', this.RADIUS);
+            g.append('circle').attr('r', d.r || this.RADIUS);
 
             d.view = function () { return g; };
 

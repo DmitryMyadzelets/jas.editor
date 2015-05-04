@@ -107,19 +107,19 @@ var control_nodes_drag = (function () {
                 xy[1] = mouse[1] - xy[1];
                 // Change positions of the selected nodes
                 commands.graph.node.shift(nodes, xy);
-                view.spring.on();
                 xy[0] = mouse[0];
                 xy[1] = mouse[1];
                 break;
             case 'mouseup':
                 to_xy.length = 0;
-                nodes.forEach(function (d) { delete d.fixed; to_xy.push(d.x, d.y); });
+                nodes.forEach(function (d) { to_xy.push(d.x, d.y); });
                 // Record the command only when the force is not working
-                if (view.spring()) {
-                    view.spring.on();
-                } else {
-                    commands.start().move_node(nodes, from_xy, to_xy);
-                }
+                // if (view.spring()) {
+                //     view.spring.on();
+                // } else {
+                //     commands.start().move_node(nodes, from_xy, to_xy);
+                // }
+                commands.start().move_node(nodes, from_xy, to_xy);
                 state = states.init;
                 break;
             }
@@ -141,6 +141,11 @@ var control_edge_drag = (function () {
 
     var mouse, d_source, node_d, edge_d, drag_target, exists, node_over;
 
+    // Returns new node for edge dragging
+    function dummy_node() {
+        return { x : mouse[0], y : mouse[1], r : 1, weight : 1 };
+    }
+
     var state, states = {
         init : function (view, source, d) {
             d_source = d;
@@ -149,14 +154,8 @@ var control_edge_drag = (function () {
                 state = states.wait_for_new_edge;
                 break;
             case 'edge':
-                // What to drag: head or tail of the edge?
-                // Drag what is closer to the mouse pointer.
-                // var head = [], tail = [];
                 mouse = view.pan.mouse();
                 drag_target = view.edge.is_head(d, mouse);
-                // vec.subtract(mouse, [d.source.x, d.source.y], tail);
-                // vec.subtract(mouse, [d.target.x, d.target.y], head);
-                // drag_target = vec.length(head) < vec.length(tail);
                 state = states.wait_for_edge_dragging;
                 break;
             }
@@ -169,13 +168,13 @@ var control_edge_drag = (function () {
             case 'mouseout':
                 mouse = view.pan.mouse();
                 // Start dragging the edge
-                // First, create a new node with zero size
-                node_d = { x : mouse[0], y : mouse[1], r : 1 };
+                // Create new (dummy) node
+                node_d = dummy_node();
                 // Second, create a new edge to that node
                 edge_d = { source : d_source, target : node_d };
-                commands.start().add_edge(edge_d);
+                commands.start()
+                    .add_edge(edge_d);
                 drag_target = true;
-                view.spring.off();
                 state = states.drag_edge;
                 break;
             }
@@ -186,8 +185,8 @@ var control_edge_drag = (function () {
                 switch (d3.event.type) {
                 case 'mouseout':
                     mouse = view.pan.mouse();
-                    // Firstly, create new node with (almost) zero size
-                    node_d = { x : mouse[0], y : mouse[1], r : 1 };
+                    // Create new (dummy) node
+                    node_d = dummy_node();
                     edge_d = d;
                     commands.start().edge_nodes(edge_d,
                         [d.source, d.target],
@@ -195,7 +194,6 @@ var control_edge_drag = (function () {
                         );
                     view.unselect_all();
                     view.edge.select(edge_d);
-                    view.spring.off();
                     state = states.drag_edge;
                     break;
                 default:
@@ -219,7 +217,6 @@ var control_edge_drag = (function () {
                 view.edge.move(edge_d); // to update wrt the node raduis
                 view.edge.select(edge_d);
                 view.node.select(node_d);
-                view.spring.on();
                 state = states.init;
                 break;
             case 'mouseover':
@@ -230,7 +227,6 @@ var control_edge_drag = (function () {
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, d] : [d, edge_d.target]
                         );
-                    view.spring.off();
                     state = states.drop_edge_or_exit;
                     break;
                 }
@@ -252,7 +248,6 @@ var control_edge_drag = (function () {
                         [edge_d.source, edge_d.target],
                         drag_target ? [edge_d.source, node_d] : [node_d, edge_d.target]
                         );
-                    view.spring.off();
                     state = states.drag_edge;
                 }
                 break;
@@ -269,7 +264,6 @@ var control_edge_drag = (function () {
                 if (exists.length <= 1) {
                     view.edge.select(edge_d);
                 }
-                view.spring.on();
                 state = states.init;
                 break;
             }
@@ -291,7 +285,7 @@ var control_edge_drag = (function () {
     // var i = 0;
     return function loop() {
         state.apply(this, arguments);
-        // Debug transitions
+        // // Debug transitions
         // if (ost !== state) {
         //     console.log(i++, ost._name, '->', state._name);
         //     ost = state;
@@ -318,7 +312,6 @@ var Controller = (function () {
 
     var x, y;
 
-
     // Helper function for text editor control
     function control_text_edit(selection, text, x, y, enter) {
         // Remove old text until the end of editing
@@ -332,7 +325,6 @@ var Controller = (function () {
                 selection.text(text);
             });
     }
-
 
     var states = {
         init : function (d) {
@@ -351,12 +343,7 @@ var Controller = (function () {
                     state = states.wait_for_keyup;
                     break;
                 case 70: // F
-                    // On/off spring behaviour
-                    if (view.spring()) {
-                        view.spring(false);
-                    } else {
-                        commands.start().spring(view);
-                    }
+                    // On/off forces behaviour
                     break;
                 case 73: // I
                     // Mark a selected state as the initial one
@@ -375,14 +362,12 @@ var Controller = (function () {
                 case 89: // Y
                     if (mode_add()) {
                         commands.redo();
-                        view.spring.on();
                     }
                     state = states.wait_for_keyup;
                     break;
                 case 90: // Z
                     if (mode_add()) {
                         commands.undo();
-                        view.spring.on();
                     }
                     state = states.wait_for_keyup;
                     break;
