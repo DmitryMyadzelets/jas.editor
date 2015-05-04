@@ -2,6 +2,8 @@
 
 + Nodes don't appear when a new graph attached without active forces.
 + Stack of undo\redo reffers to a wrong view\objects when a new graph attached. (Make a local stack attached to the view).
+- graph.edge.add(array) doesn't work.
+- setting new initial nodes doesn't change view of old initial nodes.
 - Text editor is mouse independent. When you start edit text, and move mouse to other view, you can loose the end of text editing.
 
 
