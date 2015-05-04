@@ -2388,7 +2388,7 @@ function wrap(graph, view) {
 
 
 // JSLint options:
-/*global jas, View, Graph, Commands, wrap, after, Controller*/
+/*global jas, View, Graph, Commands, wrap, after, before, Controller*/
 
 /**
  * Creates a new instance of Editor
@@ -2420,12 +2420,14 @@ var Editor = function (container) {
      */
     this.controller = new Controller(this.view, this.commands);
 
-    // Set callback which updates the view and commands when a user sets a new graph
+    // Clear commands history when a new graph is set
     after(this.graph, 'set_json', this.commands.clear_history, this.commands);
 };
 
+// Public
 jas.Editor = Editor;
 jas.after = after;
+jas.before = before;
 
 
 }(window));
