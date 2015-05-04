@@ -26,7 +26,7 @@ function get_empty_graph() {
 }
 
 
-function View(aContainer, aGraph) {
+function View(aContainer) {
     "use strict";
     var self = this;
 
@@ -85,25 +85,11 @@ function View(aContainer, aGraph) {
         .linkDistance(150)
         .chargeDistance(450)
         .size([width, height]);
-
-    // Attach graph
-    this.graph(aGraph);
 }
 
 
 
 function view_methods() {
-
-    // Returns a graph attached to the view.
-    // If new graph is given, attches it to the view.
-    this.graph = function (graph) {
-        if (arguments.length > 0) {
-            // 
-            this._graph = null;
-            this._graph = graph || get_empty_graph();
-        }
-        return this._graph;
-    };
 
     this.clear = function () {
         // Remove old graph elements

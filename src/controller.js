@@ -304,8 +304,8 @@ var Controller = (function () {
     var source;         // a SVG element where the current event occurs
 
     var mouse;          // mouse position
-    var nodes;          // array of nodes (data)
-    var edges;          // array of edges (data)
+    var nodes = [];     // array of nodes (data)
+    var edges = [];     // array of edges (data)
 
     var state;          // Reference to a current state
     var old_state;      // Reference to a previous state
@@ -346,9 +346,15 @@ var Controller = (function () {
                     // On/off forces behaviour
                     break;
                 case 73: // I
-                    // Mark a selected state as the initial one
-                    commands.start().initial(view._graph.nodes.filter(function (d) { return !!d.initial; }),
-                        view.node.selected());
+                    // Mark selected states as initial ones
+                    // Get old initial nodes
+                    nodes.length = 0;
+                    view.node.each(function (d) {
+                        if (!!d.initial) {
+                            nodes.push(d);
+                        }
+                    });
+                    commands.start().initial(nodes, view.node.selected());
                     break;
                 case 77: // M
                     // Mark selected states

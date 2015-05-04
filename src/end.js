@@ -31,14 +31,8 @@
          */
         this.controller = new Controller(this.view, this.commands);
 
-        function update() {
-            this.commands.clear_history();
-            this.view.graph(this.graph.object());
-        }
-        update.call(this);
-
         // Set callback which updates the view and commands when a user sets a new graph
-        after(this.graph, 'set_json', update.bind(this));
+        after(this.graph, 'set_json', this.commands.clear_history, this.commands);
     };
 
     jas.Editor = Editor;

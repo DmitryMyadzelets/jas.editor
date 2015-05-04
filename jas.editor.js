@@ -364,7 +364,7 @@ function get_empty_graph() {
 }
 
 
-function View(aContainer, aGraph) {
+function View(aContainer) {
     "use strict";
     var self = this;
 
@@ -423,25 +423,11 @@ function View(aContainer, aGraph) {
         .linkDistance(150)
         .chargeDistance(450)
         .size([width, height]);
-
-    // Attach graph
-    this.graph(aGraph);
 }
 
 
 
 function view_methods() {
-
-    // Returns a graph attached to the view.
-    // If new graph is given, attches it to the view.
-    this.graph = function (graph) {
-        if (arguments.length > 0) {
-            // 
-            this._graph = null;
-            this._graph = graph || get_empty_graph();
-        }
-        return this._graph;
-    };
 
     this.clear = function () {
         // Remove old graph elements
@@ -632,9 +618,14 @@ View.prototype.node = (function () {
          * @return {Object} node namespace object to work with nodes
          */
         this.create = function (root) {
+            this.root = root.append('g').attr('class', 'nodes');
             var o = Object.create(node);
-            o.root = root.append('g').attr('class', 'nodes');
+            o.root = this.root;
             return o;
+        };
+
+        this.each = function (fun) {
+            this.root.selectAll('g').each(fun);
         };
 
         this.add = function (d) {
@@ -1029,8 +1020,12 @@ var Select = (function () {
         r[2] -=  p[0];
         r[1] -=  p[1];
         r[3] -=  p[1];
-        var nodes = view._graph.nodes.filter(function (d) {
-            return point_in_rectangle(d.x, d.y, r);
+
+        var nodes = [];
+        view.node.each(function (d) {
+            if (point_in_rectangle(d.x, d.y, r)) {
+                nodes.push(d);
+            }
         });
         view.node.select(nodes);
     };
@@ -1594,8 +1589,8 @@ var Controller = (function () {
     var source;         // a SVG element where the current event occurs
 
     var mouse;          // mouse position
-    var nodes;          // array of nodes (data)
-    var edges;          // array of edges (data)
+    var nodes = [];     // array of nodes (data)
+    var edges = [];     // array of edges (data)
 
     var state;          // Reference to a current state
     var old_state;      // Reference to a previous state
@@ -1636,9 +1631,15 @@ var Controller = (function () {
                     // On/off forces behaviour
                     break;
                 case 73: // I
-                    // Mark a selected state as the initial one
-                    commands.start().initial(view._graph.nodes.filter(function (d) { return !!d.initial; }),
-                        view.node.selected());
+                    // Mark selected states as initial ones
+                    // Get old initial nodes
+                    nodes.length = 0;
+                    view.node.each(function (d) {
+                        if (!!d.initial) {
+                            nodes.push(d);
+                        }
+                    });
+                    commands.start().initial(nodes, view.node.selected());
                     break;
                 case 77: // M
                     // Mark selected states
@@ -2420,14 +2421,8 @@ function wrap(graph, view) {
          */
         this.controller = new Controller(this.view, this.commands);
 
-        function update() {
-            this.commands.clear_history();
-            this.view.graph(this.graph.object());
-        }
-        update.call(this);
-
         // Set callback which updates the view and commands when a user sets a new graph
-        after(this.graph, 'set_json', update.bind(this));
+        after(this.graph, 'set_json', this.commands.clear_history, this.commands);
     };
 
     jas.Editor = Editor;

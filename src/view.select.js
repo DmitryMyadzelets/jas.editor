@@ -23,8 +23,12 @@ var Select = (function () {
         r[2] -=  p[0];
         r[1] -=  p[1];
         r[3] -=  p[1];
-        var nodes = view._graph.nodes.filter(function (d) {
-            return point_in_rectangle(d.x, d.y, r);
+
+        var nodes = [];
+        view.node.each(function (d) {
+            if (point_in_rectangle(d.x, d.y, r)) {
+                nodes.push(d);
+            }
         });
         view.node.select(nodes);
     };

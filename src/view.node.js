@@ -88,9 +88,14 @@ View.prototype.node = (function () {
          * @return {Object} node namespace object to work with nodes
          */
         this.create = function (root) {
+            this.root = root.append('g').attr('class', 'nodes');
             var o = Object.create(node);
-            o.root = root.append('g').attr('class', 'nodes');
+            o.root = this.root;
             return o;
+        };
+
+        this.each = function (fun) {
+            this.root.selectAll('g').each(fun);
         };
 
         this.add = function (d) {
