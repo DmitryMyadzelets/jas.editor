@@ -36,7 +36,7 @@ var Graph = (function () {
         function unmark(d) { delete d.marked; }
 
         function initial(d) { d.initial = true; }
-        function uninitial(d) { delete d.initial; }
+        function not_initial(d) { delete d.initial; }
 
         /**
          * Changes the position of given node\ndoes equally and relatively to the previous
@@ -83,8 +83,16 @@ var Graph = (function () {
          * @param  {Object|Array} node|nodes
          */
         this.initial = function (d) {
-            foreach(this.data, uninitial);
+            this.not_initial(this.data);
             foreach(d, initial);
+        };
+
+        /**
+         * Makes given node\nodes not initial
+         * @param  {Object|Array} node|nodes
+         */
+        this.not_initial = function (d) {
+            foreach(d, not_initial);
         };
 
         /**

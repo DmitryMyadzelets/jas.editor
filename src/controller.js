@@ -349,7 +349,7 @@ var Controller = (function () {
                     // On/off forces behaviour
                     break;
                 case 73: // I
-                    // Mark selected states as initial ones
+                    // Set selected states as initial ones
                     // Get old initial nodes
                     nodes.length = 0;
                     view.node.each(function (d) {

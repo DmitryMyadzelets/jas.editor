@@ -65,6 +65,7 @@ function wrap(graph, view) {
     after(graph.node, 'mark',       view.node.mark,     view.node);
     after(graph.node, 'unmark',     view.node.mark,     view.node);
     after(graph.node, 'initial',    view.node.initial,  view.node);
+    after(graph.node, 'not_initial', view.node.initial,  view.node);
     after(graph.node, 'stress',     view.node.stress,   view.node);
 
     after(graph.edge, 'add',        view_edge_add,      view.edge);

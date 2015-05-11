@@ -1630,7 +1630,7 @@ var Controller = (function () {
                     // On/off forces behaviour
                     break;
                 case 73: // I
-                    // Mark selected states as initial ones
+                    // Set selected states as initial ones
                     // Get old initial nodes
                     nodes.length = 0;
                     view.node.each(function (d) {
@@ -1910,7 +1910,7 @@ var Graph = (function () {
         function unmark(d) { delete d.marked; }
 
         function initial(d) { d.initial = true; }
-        function uninitial(d) { delete d.initial; }
+        function not_initial(d) { delete d.initial; }
 
         /**
          * Changes the position of given node\ndoes equally and relatively to the previous
@@ -1957,8 +1957,16 @@ var Graph = (function () {
          * @param  {Object|Array} node|nodes
          */
         this.initial = function (d) {
-            foreach(this.data, uninitial);
+            this.not_initial(this.data);
             foreach(d, initial);
+        };
+
+        /**
+         * Makes given node\nodes not initial
+         * @param  {Object|Array} node|nodes
+         */
+        this.not_initial = function (d) {
+            foreach(d, not_initial);
         };
 
         /**
@@ -2324,6 +2332,7 @@ function wrap(graph, view) {
     after(graph.node, 'mark',       view.node.mark,     view.node);
     after(graph.node, 'unmark',     view.node.mark,     view.node);
     after(graph.node, 'initial',    view.node.initial,  view.node);
+    after(graph.node, 'not_initial', view.node.initial,  view.node);
     after(graph.node, 'stress',     view.node.stress,   view.node);
 
     after(graph.edge, 'add',        view_edge_add,      view.edge);
