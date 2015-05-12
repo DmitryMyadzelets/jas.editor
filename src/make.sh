@@ -1,3 +1,4 @@
+#!/bin/bash
 rm ../jas.editor.js
 cat \
 start.js \
