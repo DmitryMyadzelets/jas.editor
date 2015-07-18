@@ -1,5 +1,13 @@
 /*jslint bitwise: true */
 
+
+function inherit(child, parent) {
+    child.prototype = Object.create(parent.prototype);
+    // child.prototype.constructor = child; // optional, has no effect
+    child.parent = parent;
+}
+
+
 // Returns a [deep] copy of the given object
 function clone(obj, deep) {
     if (obj === null || typeof obj !== 'object') {
@@ -71,4 +79,17 @@ function before(object, method, hook, that) {
         return ret;
     };
     return before;
+}
+
+
+// Calls hook function only if the object's methods returns True
+function after_true(object, method, hook, that) {
+    var old = object[method];
+    if (typeof old !== 'function' || typeof hook !== 'function') {
+        throw new TypeError('the parameters must be functions');
+    }
+    object[method] = function () {
+        that = that || this;
+        return old.apply(that, arguments) && hook.apply(that, arguments);
+    };
 }

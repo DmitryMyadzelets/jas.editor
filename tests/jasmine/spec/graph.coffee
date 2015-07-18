@@ -1,170 +1,194 @@
 
-describe "A 'graph'", ->
+describe "The new graph", ->
 
-    editor = null
-    graph = null
+    it "is a function of jas.Editor", ->
+        expect(typeof jas.Editor.graph).toBe('function')
 
-    it "Is an object property of jas.Editor() instance", ->
-        editor = new jas.Editor
-        expect(typeof editor).toBe('object')
-        graph = editor.graph
+    it "which returns an object", ->
+        graph = jas.Editor.graph()
         expect(typeof graph).toBe('object')
 
-    it "Has 'graph.node' object", ->
-        expect(typeof graph.node).toBe('object')
+    describe "The structure of graph", ->
 
-    it "Has 'graph.edge' object", ->
-        expect(typeof graph.edge).toBe('object')
+        graph = jas.Editor.graph()
 
-    it "Has 'graph.set_json' function", ->
-        expect(typeof graph.set_json).toBe('function')
+        it "It has node", ->
+            expect(typeof graph.node).toBe('object')
 
-    it "Has 'graph.get_json' function", ->
-        expect(typeof graph.get_json).toBe('function')
+        it "It has edge", ->
+            expect(typeof graph.edge).toBe('object')
 
+    describe "Adding and removing nodes", ->
 
-describe "A 'graph.node'", ->
+        graph = jas.Editor.graph()
+        a = {}
+        b = {}
+        c = {}
 
-    editor = new jas.Editor
-    graph = editor.graph
-    node = graph.node
+        it "Adds singe node: graph.node.add(a)", ->
+            graph.node.add(a)
+            expect(graph.node.data.length).toBe(1)
 
-    describe "Has methods:", ->
+        it "graph.node.exists() returns True if the node already exists", ->
+            expect(graph.node.exists(a)).toBe(true)
 
-        it "node.add", ->
-            expect(typeof node.add).toBe('function')
+        it "graph.node.exists() returns False if the node already exists", ->
+            expect(graph.node.exists(b)).toBe(false)
 
-        it "node.remove", ->
-            expect(typeof node.remove).toBe('function')
+        it "Adds second node: graph.node.add(b)", ->
+            graph.node.add(b)
+            expect(graph.node.data.length).toBe(2)
 
-        it "node.text", ->
-            expect(typeof node.text).toBe('function')
+        it "Doesn't add the same node more the once", ->
+            graph.node.add(a)
+            expect(graph.node.data.length).toBe(2)
 
-        it "node.move", ->
-            expect(typeof node.move).toBe('function')
+        it "Removes singe node: graph.node.remove(b)", ->
+            graph.node.remove(b)
+            expect(graph.node.data.length).toBe(1)
 
-        it "node.mark", ->
-            expect(typeof node.mark).toBe('function')
+        it "Doesn't remove not existing node", ->
+            graph.node.remove(b)
+            expect(graph.node.data.length).toBe(1)
 
-        it "node.unmark", ->
-            expect(typeof node.unmark).toBe('function')
+    describe "Adding and removing edges", ->
 
-        it "node.initial", ->
-            expect(typeof node.initial).toBe('function')
+        graph = jas.Editor.graph()
+        a = {}
+        b = {}
+        c = {}
+        e1 = { source : a, target : b }
+        e2 = { source : a, target : b }
+        graph.node.add(a)
+        graph.node.add(b)
 
-        it "node.not_initial", ->
-            expect(typeof node.not_initial).toBe('function')
+        it "Adds one edge: graph.edge.add(e1)", ->
+            expect(graph.edge.add(e1)).toBe(true)
+            expect(graph.edge.data.length).toBe(1)
 
-        it "node.stress", ->
-            expect(typeof node.stress).toBe('function')
+        it "Adds second edge: graph.edge.add(e2)", ->
+            expect(graph.edge.add(e2)).toBe(true)
+            expect(graph.edge.data.length).toBe(2)
 
-    describe "Has objects:", ->
+        it "Doesn't add the same edge more the once", ->
+            expect(graph.edge.add(e1)).toBe(false)
+            expect(graph.edge.data.length).toBe(2)
 
-        it "node.edge as a reference to graph.edge", ->
-            expect(node.edge == graph.edge).toBe(true)
+        it "Removes singe edge: graph.edge.remove(b)", ->
+            graph.edge.remove(e1)
+            expect(graph.edge.data.length).toBe(1)
 
-        it "node.data is an instance of Array", ->
-            expect(node.data instanceof Array).toBe(true)
+        it "Doesn't remove not existing edge", ->
+            graph.edge.remove(e1)
+            expect(graph.edge.data.length).toBe(1)
 
+    describe "Cleaning graph", ->
 
-describe "A 'graph.edge'", ->
+        graph = jas.Editor.graph()
+        a = {}
+        b = {}
+        c = {}
+        e1 = { source : a, target : b }
+        graph.node.add(a)
+        graph.node.add(b)
+        graph.edge.add(e1)
 
-    editor = new jas.Editor
-    graph = editor.graph
-    edge = graph.edge
+        it "There are some nodes and edges", ->
+            expect(graph.node.data.length).not.toBe(0)
+            expect(graph.edge.data.length).not.toBe(0)
 
-    describe "Has methods:", ->
+        it "The graph.clear removes all nodes and edges", ->
+            graph.clear()
+            expect(graph.node.data.length).toBe(0)
+            expect(graph.edge.data.length).toBe(0)
 
-        it "edge.add", ->
-            expect(typeof edge.add).toBe('function')
+    describe "Enumeration of nodes and edges", ->
 
-        it "edge.remove", ->
-            expect(typeof edge.remove).toBe('function')
+        graph = jas.Editor.graph()
+        a = {}
+        b = {}
+        c = {}
 
-        it "edge.text", ->
-            expect(typeof edge.text).toBe('function')
+        it "Enumerates nodes: graph.node.each()", ->
+            graph.node.add(a)
+            graph.node.add(b)
+            graph.node.add(c)
+            i = 0
+            graph.node.each(-> i++)
+            expect(i).toBe(3)
 
-        it "edge.nodes", ->
-            expect(typeof edge.nodes).toBe('function')
+    describe "One graph doesn't influent another", ->
 
-        it "edge.stress", ->
-            expect(typeof edge.stress).toBe('function')
+        graph1 = jas.Editor.graph();
+        graph2 = jas.Editor.graph();
+        a = {}
+        b = {}
+        graph1.node.add(a)
+        graph1.node.add(b)
+        graph1.edge.add({ source : a, target : b })
 
-    describe "Has objects:", ->
+        it "When nodes and edges added to one graph, the another one remains unchanged", ->
+            expect(graph1.node.data.length).toBe(2)
+            expect(graph1.edge.data.length).toBe(1)
+            expect(graph2.node.data.length).toBe(0)
+            expect(graph2.edge.data.length).toBe(0)
 
-        it "edge.data is an instance of Array", ->
-            expect(edge.data instanceof Array).toBe(true)
+    describe "Structural methods", ->
 
+        describe "Adjacent edges to a given node", ->
 
-describe "A 'graph.get_json' method", ->
+            graph = jas.Editor.graph()
+            a = {}
+            b = {}
+            graph.node.add(a)
+            graph.node.add(b)
+            graph.edge.add({ source : a, target : b })
+            graph.edge.add({ source : b, target : b })
 
-    editor = new jas.Editor
-    graph = editor.graph
-    o = graph.get_json()
+            it "Graph has 2 nodes 'a' and 'b' and 2 edges 'a-b' and 'b-b' ", ->
+                expect(graph.node.data.length).toBe(2)
+                expect(graph.edge.data.length).toBe(2)
 
-    it "Returns an object { nodes, edges } with empty nodes and edges", ->
-        expect(typeof o).toBe('object')
-        expect(o.nodes instanceof Array).toBe(true)
-        expect(o.edges instanceof Array).toBe(true)
-        expect(o.nodes.length).toBe(0)
-        expect(o.edges.length).toBe(0)
+            it "graph.edge.adjacent(a) returns array with 1 edge", ->
+                e = graph.edge.adjacent(a)
+                expect(e.length).toBe(1)
 
+            it "graph.edge.adjacent(b) returns array with 2 edges", ->
+                e = graph.edge.adjacent(b)
+                expect(e.length).toBe(2)
 
-describe "A 'graph.set_json' method", ->
+            it "Works also for array of nodes: graph.edge.adjacent([a, b]) gives 2 edges", ->
+                e = graph.edge.adjacent([a, b])
+                expect(e.length).toBe(2)
 
-    editor = new jas.Editor
-    graph = editor.graph
+            it "Edges are unique: graph.edge.adjacent([a, a]) gives 1 edge", ->
+                e = graph.edge.adjacent([a, a])
+                expect(e.length).toBe(1)
 
-    g = {
-        nodes : [{}, {}]
-        edges : [
-            { source : 0, target : 1 },
-            { source : 1, target : 0 },
-            { source : 1, target : 1 },
-        ]
-    }
+        describe "Incoming and outgoing edges", ->
 
-    graph.set_json(g)
+            graph = jas.Editor.graph()
+            a = {}
+            b = {}
+            graph.node.add(a)
+            graph.node.add(b)
+            graph.edge.add({ source : a, target : b })
+            graph.edge.add({ source : b, target : b })
+            graph.edge.add({ source : b, target : a })
 
-    describe "Can attach a graph with 2 nodes and 3 edges", ->
-        o = graph.get_json()
+            it "Graph has 2 nodes 'a' and 'b' and 3 edges 'a-b', 'b-b' and 'b-a'", ->
+                expect(graph.node.data.length).toBe(2)
+                expect(graph.edge.data.length).toBe(3)
 
-        it "And 'graph.get_json' returns an object with 2 nodes and 3 edges", ->
-            console.log o
-            expect(typeof o).toBe('object')
-            expect(o.nodes instanceof Array).toBe(true)
-            expect(o.edges instanceof Array).toBe(true)
-            expect(o.nodes.length).toBe(2)
-            expect(o.edges.length).toBe(3)
+            it "Node 'a' has 1 incoming edge", ->
+                expect(graph.edge.incoming(a).length).toBe(1)
 
-    describe "The graph can be modified", ->
+            it "Node 'b' has 2 incoming edge", ->
+                expect(graph.edge.incoming(b).length).toBe(2)
 
-        node = {}
+            it "Node 'a' has 1 outgoing edge", ->
+                expect(graph.edge.outgoing(a).length).toBe(1)
 
-        it "graph.node.add(node = {}) adds new 3d node", ->
-            graph.node.add(node)
-            expect(graph.get_json().nodes.length).toBe(3)
+            it "Nodes 'a' and 'b' has 3 outgoing edges: graph.edge.outgoing([a, b])", ->
+                expect(graph.edge.outgoing([a, b]).length).toBe(3)
 
-        it "graph.node.remove(node) removes this node", ->
-            graph.node.remove(node)
-            expect(graph.get_json().nodes.length).toBe(2)
-
-        describe "The same can be done with arrays", ->
-
-            it "graph.node.add([node]) adds new 3d node", ->
-                graph.node.add([node])
-                expect(graph.get_json().nodes.length).toBe(3)
-
-            it "graph.node.remove([node]) removes this node", ->
-                graph.node.remove([node])
-                expect(graph.get_json().nodes.length).toBe(2)
-
-        it "graph.node.add([node, node]) adds the same node twice", ->
-                graph.node.add([node, node])
-                expect(graph.get_json().nodes.length).toBe(4)
-
-        it "graph.node.remove(node) removes one node", ->
-                graph.node.remove(node)
-                expect(graph.get_json().nodes.length).toBe(3)
-                graph.node.remove(node)
-                expect(graph.get_json().nodes.length).toBe(2)

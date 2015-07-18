@@ -157,3 +157,37 @@ The `node` and `edge` properties of the graph are created dynamically. Than, the
 
 UML diagram
 http://yuml.me/edit/fb7e0266
+
+# Refactoring graph, wrapper and undo/redo
+
+## Wrapper
+
+    graph = jas.editor.graph();
+
+We create a new object that acts as graph, i.e. `wraph => graph`, but invokes automatically `before` and `after` methods.
+
+    wraph = wrap(graph, view);
+
+The `wrap` function should have inside smth like:
+
+    after(first_function, second_function);
+    after(graph.node.add, function () {});
+
+The first function should be accessible either:
+
+    graph.node.add()
+    wraph.node.add()
+
+Hence, the graph can't replace its own methods. Instead, the wraph should create new methods which may belong to the wraph itself or to a wraph's prototype.
+
+## Which methods to wrap?
+
+Now, the graph methods do not return any result. Thus, it's impossible to tell if, for instance, a node object has been added to the graph, or not for the reason it already exists in the graph. The methods which deal with arrays of objects can have a deterministic result. If we are interested in the result, then the singular object methods should be checked for it. But the graph's singular object methods are closed. Thus, only the graph can access them. They can be accessed in the same closure they exist. However, there are different closures in the graph: `add`, `remove`, `text` methods in the base object, and `move` method in the node object. That's a problem.
+
+Solutions may be:
+
+1. Leave only single object methods, make them public. For arrays `array.forEach` can be used. The View, actually, do not benefit for multiple objects methods in terms of performance, since it's using `foreach` inside.
+2. Each method may know how to be wrapped. It's quite expensive.
+3. Do not check results of the methods. Then we may loose internal logic of the graph.
+
+Seems that the first solution is the best.

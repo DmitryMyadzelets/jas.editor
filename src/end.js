@@ -40,5 +40,7 @@ jas.Editor = Editor;
 jas.after = after;
 jas.before = before;
 
+jas.Editor.graph = graph;
+jas.Editor.proxy = graph_proxy;
 
 }(window));

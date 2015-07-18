@@ -26,6 +26,14 @@
 
 /*jslint bitwise: true */
 
+
+function inherit(child, parent) {
+    child.prototype = Object.create(parent.prototype);
+    // child.prototype.constructor = child; // optional, has no effect
+    child.parent = parent;
+}
+
+
 // Returns a [deep] copy of the given object
 function clone(obj, deep) {
     if (obj === null || typeof obj !== 'object') {
@@ -97,6 +105,19 @@ function before(object, method, hook, that) {
         return ret;
     };
     return before;
+}
+
+
+// Calls hook function only if the object's methods returns True
+function after_true(object, method, hook, that) {
+    var old = object[method];
+    if (typeof old !== 'function' || typeof hook !== 'function') {
+        throw new TypeError('the parameters must be functions');
+    }
+    object[method] = function () {
+        that = that || this;
+        return old.apply(that, arguments) && hook.apply(that, arguments);
+    };
 }
 
 
@@ -1873,7 +1894,286 @@ var Controller = (function () {
     return constructor;
 }());
 // JSLint options:
-/*global clone, float2int, wrap*/
+/*global clone, float2int, after_true, inherit*/
+
+var graph = (function () {
+    "use strict";
+
+    var Element = (function () {
+
+        function constructor() {
+            this.data = [];
+        }
+
+        function methods() {
+
+            /**
+             * Calls function 'fun' for each datum
+             * @param  {Function}
+             * @param  {Object} [context] If provided, will be passed instead of `this`
+             */
+            this.each = function (fun, that) {
+                var i = this.data.length;
+                that = that || this;
+                // We use backward cycle to allow a datum removal
+                while (i--) {
+                    fun.call(that, this.data[i]);
+                }
+            };
+
+            /**
+             * Adds an object into the array
+             * @param {Object}
+             * @return {Boolean} True if it was added
+             */
+            this.add = function (o) {
+                if (this.data.indexOf(o) < 0) {
+                    this.data.push(o);
+                    return true;
+                }
+                return false;
+            };
+
+            /**
+             * Removes an object from the array
+             * @param {Object}
+             * @return {Boolean} True if it was removed
+             */
+            this.remove = function (o) {
+                var i = this.data.indexOf(o);
+                if (i >= 0) {
+                    this.data.splice(i, 1);
+                    return true;
+                }
+                return false;
+            };
+
+            // Returns True if the object exists in the array
+            this.exists = function (o) {
+                return this.data.indexOf(o) >= 0;
+            };
+        }
+
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+
+    var Node = (function () {
+
+        function constructor() {
+            constructor.parent.call(this);
+        }
+
+        function methods() {
+            return;
+        }
+
+        inherit(constructor, Element);
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+
+    var Edge = (function () {
+
+        function constructor() {
+            constructor.parent.call(this);
+        }
+
+        function methods() {
+            /**
+             * Helper function for conditional edges selection
+             * Returns new array of (unique) edges filtered upon the result of the test(edge, node) call for each node.
+             * The callback function will be invoked `|nodes| * |edges|` times.
+             * 
+             * @param  {Array} edges Input array of edges
+             * @param  {Object|Array} nodes
+             * @param  {Function} test Callback function
+             * @return {Array} edges Output array of edges
+             */
+            function filter(edges, node, test) {
+                var out;
+                if (node instanceof Array) {
+                    out = [];
+                    node.forEach(function (n) {
+                        var a = edges.filter(function (e) { return test(e, n) && out.indexOf(e) < 0; });
+                        while (a.length) { out.push(a.pop()); }
+                    });
+                } else {
+                    out = edges.filter(function (e) { return test(e, node); });
+                }
+                return out;
+            }
+
+            function test_adjacent(edge, node) {
+                return edge.source === node || edge.target === node;
+            }
+
+            function test_incoming(edge, node) {
+                return edge.target === node;
+            }
+
+            function test_outgoing(edge, node) {
+                return edge.source === node;
+            }
+
+            // Adds the edge to the graph
+            // Extends the parent metod with verification of whether the edge nodes exist
+            // Returns True if it was added
+            this.add = function (edge) {
+                return edge &&
+                        this.node.exists(edge.source) &&
+                        this.node.exists(edge.target) &&
+                        constructor.parent.prototype.add.apply(this, arguments);
+            };
+
+            /**
+             * Returns array of incoming and outgoing edges of the given node\nodess]
+             * @param  {Object|Array} node|nodes
+             */
+            this.adjacent = function (nodes) {
+                return filter(this.data, nodes, test_adjacent);
+            };
+
+            /**
+             * Returns array of incoming edges to the given node\nodes
+             * @param  {Object|Array} node|nodes
+             */
+            this.incoming = function (nodes) {
+                return filter(this.data, nodes, test_incoming);
+            };
+
+            /**
+             * Returns array of outgoing edges from the given node\nodes
+             * @param  {Object|Array} node|nodes
+             */
+            this.outgoing = function (nodes) {
+                return filter(this.data, nodes, test_outgoing);
+            };
+        }
+
+        inherit(constructor, Element);
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+
+    var Graph = (function () {
+
+        function constructor() {
+            this.node = new this.node_constructor();
+            this.edge = new this.edge_constructor();
+            // Let the edge access to the node
+            this.edge.node = this.node;
+        }
+
+        function methods() {
+
+            this.get = function () {
+                return;
+            };
+
+            this.set = function () {
+                return;
+            };
+
+            // Removes all the edges and nodes
+            this.clear = function () {
+                this.edge.each(this.edge.remove);
+                this.node.each(this.node.remove);
+            };
+
+            this.node_constructor = Node;
+            this.edge_constructor = Edge;
+        }
+
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+    // Constructor of the graph
+    function constructor() {
+        return new Graph();
+    }
+
+    // Expose constructors
+    Graph.Node = Node;
+    Graph.Edge = Edge;
+    constructor.Graph = Graph;
+    return constructor;
+}());
+
+
+// ============================================================================
+
+var graph_proxy = (function () {
+
+    // Creates and returns a function which calls 'before' and, if returns True, calls 'after'.
+    function after_true(before, after, that) {
+        return function () {
+            that = that || this;
+            return before.apply(that, arguments) && after.apply(that, arguments);
+        };
+    }
+
+    var Node = (function () {
+
+        function constructor() {
+            constructor.parent.call(this);
+        }
+
+        function methods() {
+            return;
+        }
+
+        inherit(constructor, graph.Graph.Node);
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+
+    var Edge = (function () {
+
+        function constructor() {
+            constructor.parent.call(this);
+        }
+
+        function methods() {
+            this.add = after_true(constructor.parent.prototype.add, function () {
+                console.log('cool');
+            });
+        }
+
+        inherit(constructor, graph.Graph.Edge);
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+
+    var Graph = (function () {
+
+        function constructor(view) {
+            constructor.parent.call(this);
+            this.view = view;
+        }
+
+        function methods() {
+            this.node_constructor = Node;
+            this.edge_constructor = Edge;
+        }
+
+        inherit(constructor, graph.Graph);
+        methods.call(constructor.prototype);
+        return constructor;
+    }());
+
+    return function (view) {
+        return new Graph(view);
+    };
+}());
+
+// ============================================================================
 
 
 var Graph = (function () {
@@ -1883,7 +2183,7 @@ var Graph = (function () {
      * Calls function 'fun' for a single object or an array of objects
      * @param  {Object|Array}
      * @param  {Function}
-     * @param  {Object} [context] If provided, will be given instead of `this`
+     * @param  {Object} [context] If provided, will be passed instead of `this`
      */
     function foreach(d, fun, that) {
         that = that || this;
@@ -1913,9 +2213,9 @@ var Graph = (function () {
         function not_initial(d) { delete d.initial; }
 
         /**
-         * Changes the position of given node\ndoes equally and relatively to the previous
+         * Changes the position of given nodes equally and relatively to the previous
          * @param  {Object|Array} node|nodes
-         * @param  {Array} dxy array of the coordinates chage in form: [dx, dy]
+         * @param  {Array} dxy array of the coordinates change in form: [dx, dy]
          */
         this.shift = function (d, dxy) {
             foreach(d, shift, dxy);
@@ -1923,7 +2223,7 @@ var Graph = (function () {
         };
 
         /**
-         * Moves each given node\nodes to a new position
+         * Moves each given node to a new position
          * @param  {Object|Array} node|nodes
          * @param  {Array} xy array of coordinates in form: [x1, y1, ... xn, yn]
          */
@@ -2068,7 +2368,7 @@ var Graph = (function () {
 
         /**
          * Moves the edge
-         * It is invoked when an edge's node is moved, though it may not affect the edge itslef
+         * It is invoked when an edge's node is moved, though it may not affect the edge itself
          */
         this.move = function () {
             return;
@@ -2145,7 +2445,7 @@ var Graph = (function () {
         /**
          * Sets .stressed parameter for the given object
          * @param  {Object}
-         * @return {Object} Itsef
+         * @return {Object} Itself
          */
         this.stress = function (d) {
             foreach(this.data, unstress);
@@ -2163,6 +2463,7 @@ var Graph = (function () {
     var nodes_prototype = Object.create(basic_prototype);
     nodes_methods.call(nodes_prototype);
 
+    // The prototype with edges methods
     var edges_prototype = Object.create(basic_prototype);
     edges_methods.call(edges_prototype);
 
@@ -2438,5 +2739,7 @@ jas.Editor = Editor;
 jas.after = after;
 jas.before = before;
 
+jas.Editor.graph = graph;
+jas.Editor.proxy = graph_proxy;
 
 }(window));
